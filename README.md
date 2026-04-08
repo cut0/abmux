@@ -1,14 +1,8 @@
 # abmux
 
-AI Board on tmux — A terminal UI for managing Claude Code sessions on tmux.
+AI Board on tmux — A TUI for managing multiple Claude Code sessions from a single terminal screen.
 
-## Features
-
-- Manage tmux sessions grouped by project
-- Detect Claude session status: waiting for input, thinking, running tools, idle
-- Launch new Claude Code sessions with prompts via your `$EDITOR`
-- Fuzzy search directories to add new sessions
-- CLI commands for scripting: `new`, `open`, `kill`, `list`
+Monitor, create, switch between, and delete Claude Code sessions running on tmux, all in one place.
 
 ## Requirements
 
@@ -19,34 +13,116 @@ AI Board on tmux — A terminal UI for managing Claude Code sessions on tmux.
 ## Install
 
 ```sh
-npm install -g abmux
-# or
-yarn global add abmux
-# or
 pnpm add -g abmux
 ```
 
-## Usage
+## Getting Started
 
 ```sh
-abmux                              # Start TUI
-abmux new <prompt> [--dir <path>]  # Create session and launch Claude
-abmux open [session]               # Attach to session
-abmux kill [session]               # Kill session
-abmux list                         # List sessions
-abmux --help                       # Show help
+abmux
 ```
+
+Run without arguments to launch the TUI.
+
+CLI commands are also available for scripting:
+
+```sh
+abmux new <prompt> [--dir <path>]  # Create a session
+abmux open [session]               # Attach to a session
+abmux kill [session]               # Kill a session
+abmux list                         # List sessions
+```
+
+## Screen Layout
+
+The main screen is split into three panels:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ abmux - v0.0.x                                                  │
+├───────────────────────┬─────────────────────────────────────────┤
+│                       │                                         │
+│  Session List         │  Pane List                              │
+│  (Left Panel)         │  (Right Panel)                          │
+│                       │                                         │
+│  > my-project (cwd)   │    ⠋ [thinking] Refactoring...  %5     │
+│    other-project      │    ✳ [running]  Fixing tests    %8     │
+│                       │    ○ [idle]     Waiting         %12    │
+│                       │    ● vim                        %3     │
+│                       │                                         │
+├───────────────────────┴─────────────────────────────────────────┤
+│                                                                  │
+│  Session Overview (Bottom Panel)                                 │
+│  Summaries of what Claude is working on in each session          │
+│                                                                  │
+├──────────────────────────────────────────────────────────────────┤
+│ ↑/↓ move  Enter select  Tab next  n add  q quit    ● 2 thinking │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+Press `Tab` to cycle focus: Left → Right → Bottom. The focused panel is highlighted with a green border.
+
+## Panels
+
+### Left Panel: Session List
+
+Lists tmux sessions grouped by project directory. The session matching your current directory is marked with `(cwd)`.
+
+| Key           | Action                              |
+| ------------- | ----------------------------------- |
+| `↑` / `↓`     | Move cursor                         |
+| `Enter` / `→` | Select session, move to right panel |
+| `n`           | Add session via directory search    |
+| `d`           | Delete session                      |
+| `q`           | Quit                                |
+
+### Right Panel: Pane List
+
+Shows all panes in the selected session. Claude Code panes display their status; other panes (editors, shells) are also listed.
+
+| Key         | Action                          |
+| ----------- | ------------------------------- |
+| `↑` / `↓`   | Move cursor                     |
+| `Enter`     | Attach to pane (switch to tmux) |
+| `n`         | Create a new Claude session     |
+| `v`         | Open session in `$EDITOR`       |
+| `d`         | Kill pane                       |
+| `Esc` / `←` | Back to left panel              |
+
+### Bottom Panel: Session Overview
+
+Displays AI-generated summaries of what Claude is doing in each session. Auto-refreshes every 60 seconds.
+
+| Key         | Action             |
+| ----------- | ------------------ |
+| `↑` / `↓`   | Scroll             |
+| `Tab`       | Next panel         |
+| `Esc` / `←` | Back to left panel |
+
+## Status Icons
+
+The right panel and the status bar show Claude session states with these icons:
+
+| Icon          | Status   | Meaning                   |
+| ------------- | -------- | ------------------------- |
+| `⠋` (braille) | thinking | Claude is reasoning       |
+| `✳`           | running  | Executing a tool          |
+| `❓`          | confirm  | Waiting for user approval |
+| `❯`           | waiting  | Ready for input           |
+| `○`           | idle     | Idle                      |
+
+Non-Claude panes show `●` (busy) or `○` (available).
 
 ## Development
 
 ```sh
 pnpm install
-pnpm start        # Run in development mode (tsx)
-pnpm test         # Run tests with Vitest
-pnpm typecheck    # Type check without emitting
-pnpm lint:check   # Lint with oxlint
-pnpm format:check # Check formatting with oxfmt
-pnpm build        # Bundle with esbuild
+pnpm start        # Run in dev mode
+pnpm test         # Run tests
+pnpm typecheck    # Type check
+pnpm lint:check   # Lint
+pnpm format:check # Format check
+pnpm build        # Bundle
 ```
 
 ## License
