@@ -13,6 +13,7 @@ type Props = {
   onUnhighlight: (up: UnifiedPane) => Promise<void>;
   onBack: () => void;
   onNewSession: (sessionName: string) => void;
+  onOpenEditor: (sessionName: string) => void;
   onKillPane: (paneId: string) => Promise<void>;
   initialCursor?: number;
   cursorRef?: { current: number };
@@ -28,6 +29,7 @@ export const PaneListPanel: FC<Props> = ({
   onUnhighlight,
   onBack,
   onNewSession,
+  onOpenEditor,
   onKillPane,
   initialCursor,
   cursorRef,
@@ -52,6 +54,7 @@ export const PaneListPanel: FC<Props> = ({
       onUnhighlight={onUnhighlight}
       onBack={onBack}
       onNewSession={onNewSession}
+      onOpenEditor={onOpenEditor}
       onKillPane={onKillPane}
       initialCursor={initialCursor}
       cursorRef={cursorRef}

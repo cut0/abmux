@@ -12,6 +12,7 @@ import { SessionOverviewPanel } from "./SessionOverviewPanel.tsx";
 import { ConfirmView } from "./ConfirmView.tsx";
 import { DeleteSessionView } from "./DeleteSessionView.tsx";
 import { DirectorySearchView } from "./DirectorySearchView.tsx";
+import { PromptInputView } from "./PromptInputView.tsx";
 import { useInterval } from "../hooks/use-interval.ts";
 import { useTerminalSize } from "../hooks/use-terminal-size.ts";
 import { APP_TITLE, APP_VERSION } from "../constants.ts";
@@ -37,6 +38,7 @@ export type ManagerActions = {
 const MODE = {
   split: "split",
   confirm: "confirm",
+  promptInput: "promptInput",
   deleteSession: "deleteSession",
   addSession: "addSession",
 } as const;
@@ -270,6 +272,13 @@ export const ManagerView: FC<Props> = ({
   }, []);
 
   const handleNewSession = useCallback(
+    (_sessionName: string): void => {
+      setMode(MODE.promptInput);
+    },
+    [],
+  );
+
+  const handleOpenEditor = useCallback(
     (sessionName: string): void => {
       const cwd = selectedManagedSession?.path;
       if (!cwd) return;
@@ -291,6 +300,18 @@ export const ManagerView: FC<Props> = ({
     },
     [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh],
   );
+
+  const handlePromptInputSubmit = useCallback(
+    (prompt: string): void => {
+      setPendingPrompt(prompt);
+      setMode(MODE.confirm);
+    },
+    [],
+  );
+
+  const handlePromptInputCancel = useCallback((): void => {
+    setMode(MODE.split);
+  }, []);
 
   const handleCancelConfirm = useCallback((): void => {
     setPendingPrompt("");
@@ -375,6 +396,16 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
+  if (mode === MODE.promptInput) {
+    return (
+      <PromptInputView
+        selectedDir={resolvedSession ?? ""}
+        onSubmit={handlePromptInputSubmit}
+        onCancel={handlePromptInputCancel}
+      />
+    );
+  }
+
   if (mode === MODE.confirm && pendingPrompt) {
     return (
       <ConfirmView
@@ -432,6 +463,7 @@ export const ManagerView: FC<Props> = ({
             onUnhighlight={handleUnhighlight}
             onBack={handleBack}
             onNewSession={handleNewSession}
+            onOpenEditor={handleOpenEditor}
             onKillPane={handleKillPane}
             initialCursor={paneInitialCursor}
             cursorRef={paneCursorRef}
@@ -454,7 +486,7 @@ export const ManagerView: FC<Props> = ({
           focus === FOCUS.left
             ? "\u2191/\u2193 move  Enter/\u2192 select  Tab next  n add  d delete  q quit"
             : focus === FOCUS.right
-              ? "\u2191/\u2193 move  Enter focus  Tab next  n new  d kill  Esc/\u2190 back  q quit"
+              ? "\u2191/\u2193 move  Enter focus  Tab next  n new  v vim  d kill  Esc/\u2190 back  q quit"
               : "\u2191/\u2193 scroll  Tab next  Esc/\u2190 back  q quit"
         }
         statusCounts={statusCounts}
