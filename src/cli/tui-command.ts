@@ -24,6 +24,7 @@ export const createTuiCommand =
     let pendingPrompt: string | undefined;
     let pendingSession: string | undefined;
     let pendingCwd: string | undefined;
+    let lastOverviewResult: SessionSummaryResult | undefined;
 
     const actions: ManagerActions = {
       fetchSessions: async (): Promise<ManagedSession[]> => {
@@ -56,7 +57,9 @@ export const createTuiCommand =
       },
       fetchOverview: async (sessions: ManagedSession[]): Promise<SessionSummaryResult> => {
         const groups: SessionGroup[] = sessions.flatMap((s) => s.groups);
-        return await usecases.manager.fetchOverview(groups);
+        const result = await usecases.manager.fetchOverview(groups);
+        lastOverviewResult = result;
+        return result;
       },
       createSession: async (
         sessionName: string,
@@ -114,6 +117,7 @@ export const createTuiCommand =
           restoredPrompt: prompt,
           restoredSession: session,
           restoredCwd: cwd,
+          restoredOverview: lastOverviewResult,
         }),
         { concurrent: true },
       );
