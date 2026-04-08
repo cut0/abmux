@@ -156,7 +156,8 @@ export const ManagerView: FC<Props> = ({
         .reduce<Partial<Record<SessionStatus, number>>>((acc, p) => {
           const s = p.claudeStatus;
           if (!s) return acc;
-          return { ...acc, [s]: (acc[s] ?? 0) + 1 };
+          acc[s] = (acc[s] ?? 0) + 1;
+          return acc;
         }, {}),
     [allGroups],
   );

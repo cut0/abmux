@@ -50,7 +50,7 @@ export const SessionOverviewPanel: FC<Props> = ({
       const group = groups.find((g) => g.sessionName === item.sessionName);
       const allPanes = group?.tabs.flatMap((t) => t.panes) ?? [];
 
-      const paneLines: OverviewLine[] = item.panes.map((paneSummary) => {
+      const paneLines = item.panes.map((paneSummary): OverviewLine => {
         const matched = allPanes.find(
           (p) => (p.claudeTitle ?? p.pane.title) === paneSummary.paneTitle,
         );
@@ -62,7 +62,7 @@ export const SessionOverviewPanel: FC<Props> = ({
           : undefined;
         return {
           key: `p:${item.sessionName}:${paneSummary.paneTitle}`,
-          type: "pane" as const,
+          type: "pane",
           statusLabel,
           statusColor,
           description: paneSummary.description,
@@ -83,9 +83,6 @@ export const SessionOverviewPanel: FC<Props> = ({
   }, [overallSummary, items, groups]);
 
   const clampedCursor = cursor >= lines.length ? Math.max(0, lines.length - 1) : cursor;
-  if (clampedCursor !== cursor) {
-    setCursor(clampedCursor);
-  }
 
   const reservedLines = 3; // border top(1) + header(1) + border bottom(1)
   const { scrollOffset, visibleCount } = useScroll(
