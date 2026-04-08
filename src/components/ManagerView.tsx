@@ -20,7 +20,12 @@ import { swallow } from "../utils/PromiseUtils.ts";
 export type ManagerActions = {
   fetchSessions: () => Promise<ManagedSession[]>;
   fetchOverview: (sessions: ManagedSession[]) => Promise<SessionSummaryResult>;
-  createSession: (sessionName: string, cwd: string, prompt: string) => Promise<void>;
+  createSession: (
+    sessionName: string,
+    cwd: string,
+    prompt: string,
+    worktree: boolean,
+  ) => Promise<void>;
   killSession: (sessionName: string) => Promise<void>;
   killPane: (paneId: string) => Promise<void>;
   highlightWindow: (up: UnifiedPane) => Promise<void>;
@@ -223,14 +228,19 @@ export const ManagerView: FC<Props> = ({
     [actions, selectedManagedSession],
   );
 
-  const handleConfirmNew = useCallback((): void => {
-    if (!resolvedSession) return;
-    const cwd = restoredCwd ?? selectedManagedSession?.path;
-    if (!cwd) return;
-    void actions.createSession(resolvedSession, cwd, pendingPrompt).then(() => void refresh());
-    setPendingPrompt("");
-    setMode(MODE.split);
-  }, [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh]);
+  const handleConfirmNew = useCallback(
+    ({ worktree }: { worktree: boolean }): void => {
+      if (!resolvedSession) return;
+      const cwd = restoredCwd ?? selectedManagedSession?.path;
+      if (!cwd) return;
+      void actions
+        .createSession(resolvedSession, cwd, pendingPrompt, worktree)
+        .then(() => void refresh());
+      setPendingPrompt("");
+      setMode(MODE.split);
+    },
+    [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh],
+  );
 
   const handleCancelConfirm = useCallback((): void => {
     setPendingPrompt("");

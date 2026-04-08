@@ -11,6 +11,7 @@ export type CreateSessionInput = {
   sessionName: string;
   cwd: string;
   prompt: string;
+  worktree: boolean;
 };
 
 export type ManagerUsecase = {
@@ -32,7 +33,12 @@ export const createManagerUsecase = (context: UsecaseContext): ManagerUsecase =>
     `${up.pane.sessionName}:${String(up.pane.windowIndex)}`;
 
   return {
-    createSession: async ({ sessionName, cwd, prompt }: CreateSessionInput): Promise<void> => {
+    createSession: async ({
+      sessionName,
+      cwd,
+      prompt,
+      worktree,
+    }: CreateSessionInput): Promise<void> => {
       const exists = await context.infra.tmuxCli.hasSession(sessionName);
       if (!exists) {
         await context.infra.tmuxCli.newSession({ name: sessionName, cwd });
@@ -46,7 +52,8 @@ export const createManagerUsecase = (context: UsecaseContext): ManagerUsecase =>
       const target = sessionPanes[0]?.paneId;
       if (!target) return;
       const escapedPrompt = escapeShellArg(prompt);
-      await tmux.sendCommand({ target, command: `claude -w -- ${escapedPrompt}` });
+      const worktreeFlag = worktree ? " -w" : "";
+      await tmux.sendCommand({ target, command: `claude${worktreeFlag} -- ${escapedPrompt}` });
     },
 
     list: async (): Promise<ManagerListOutput> => {

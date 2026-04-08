@@ -131,7 +131,7 @@ describe("createManagerUsecase", () => {
   });
 
   describe("createSession", () => {
-    it("新しい tmux session を作成して Claude を起動する", async () => {
+    it("新しい tmux session を作成して Claude を worktree 付きで起動する", async () => {
       vi.mocked(mockTmuxCli.hasSession).mockResolvedValue(false);
       vi.mocked(mockTmuxCli.listPanes).mockResolvedValue([
         mockPane({ sessionName: "my-project", paneId: "%10", windowIndex: 0, paneIndex: 0 }),
@@ -140,11 +140,29 @@ describe("createManagerUsecase", () => {
         sessionName: "my-project",
         cwd: "/home/user/my-project",
         prompt: "テスト",
+        worktree: true,
       });
       expect(mockTmuxCli.newSession).toHaveBeenCalled();
       expect(mockTmux.sendCommand).toHaveBeenCalledWith({
         target: "%10",
         command: "claude -w -- 'テスト'",
+      });
+    });
+
+    it("worktree が false の場合は -w フラグなしで起動する", async () => {
+      vi.mocked(mockTmuxCli.hasSession).mockResolvedValue(false);
+      vi.mocked(mockTmuxCli.listPanes).mockResolvedValue([
+        mockPane({ sessionName: "my-project", paneId: "%10", windowIndex: 0, paneIndex: 0 }),
+      ]);
+      await usecase.createSession({
+        sessionName: "my-project",
+        cwd: "/home/user/my-project",
+        prompt: "テスト",
+        worktree: false,
+      });
+      expect(mockTmux.sendCommand).toHaveBeenCalledWith({
+        target: "%10",
+        command: "claude -- 'テスト'",
       });
     });
 
@@ -157,6 +175,7 @@ describe("createManagerUsecase", () => {
         sessionName: "my-project",
         cwd: "/home/user/my-project",
         prompt: "テスト",
+        worktree: true,
       });
       expect(mockTmuxCli.newSession).not.toHaveBeenCalled();
       expect(mockTmuxCli.newWindow).toHaveBeenCalled();
@@ -171,6 +190,7 @@ describe("createManagerUsecase", () => {
         sessionName: "proj",
         cwd: "/home/user/proj",
         prompt: "it's a $test",
+        worktree: true,
       });
       expect(mockTmux.sendCommand).toHaveBeenCalledWith({
         target: "%7",
