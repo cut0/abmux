@@ -13,7 +13,6 @@ import { useTerminalSize } from "../hooks/use-terminal-size.ts";
 import { APP_TITLE, APP_VERSION } from "../constants.ts";
 import { swallow } from "../utils/PromiseUtils.ts";
 
-
 export type ManagerActions = {
   fetchSessions: () => Promise<SessionGroup[]>;
   createSession: (sessionName: string, cwd: string, prompt: string) => Promise<void>;
@@ -57,7 +56,6 @@ type Props = {
 
 const POLL_INTERVAL = 3000;
 
-
 export const ManagerView: FC<Props> = ({
   actions,
   currentSession,
@@ -74,7 +72,6 @@ export const ManagerView: FC<Props> = ({
   const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
   const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
   const sessionCwdMap = useRef(new Map<string, string>());
-
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
@@ -102,14 +99,12 @@ export const ManagerView: FC<Props> = ({
     };
   }, [refresh]);
 
-
   const resolvedSession = selectedSession ?? fetchState.data[0]?.sessionName;
 
   const selectedGroup = useMemo(
     () => fetchState.data.find((g) => g.sessionName === resolvedSession),
     [fetchState.data, resolvedSession],
   );
-
 
   const handleOpenAddSession = useCallback((): void => {
     setMode(MODE.addSession);
@@ -218,7 +213,6 @@ export const ManagerView: FC<Props> = ({
     },
     [actions],
   );
-
 
   if (fetchState.isLoading) {
     return (

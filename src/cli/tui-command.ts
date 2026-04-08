@@ -13,7 +13,8 @@ type TuiCommandDeps = {
   infra: Infra;
 };
 
-export const createTuiCommand = ({ usecases, services, infra }: TuiCommandDeps) =>
+export const createTuiCommand =
+  ({ usecases, services, infra }: TuiCommandDeps) =>
   async (): Promise<void> => {
     const directories = await services.directoryScan.scan();
 
@@ -31,9 +32,7 @@ export const createTuiCommand = ({ usecases, services, infra }: TuiCommandDeps) 
               group.tabs.map(async (tab) => ({
                 windowIndex: tab.windowIndex,
                 windowName: tab.windowName,
-                panes: await Promise.all(
-                  tab.panes.map((up) => usecases.manager.enrichStatus(up)),
-                ),
+                panes: await Promise.all(tab.panes.map((up) => usecases.manager.enrichStatus(up))),
               })),
             ),
           })),

@@ -4,7 +4,8 @@ type ListCommandDeps = {
   usecases: Pick<Usecases, "manager">;
 };
 
-export const createListCommand = ({ usecases }: ListCommandDeps) =>
+export const createListCommand =
+  ({ usecases }: ListCommandDeps) =>
   async (): Promise<void> => {
     const result = await usecases.manager.list();
 

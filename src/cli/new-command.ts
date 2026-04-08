@@ -6,7 +6,8 @@ type NewCommandDeps = {
   usecases: Pick<Usecases, "manager">;
 };
 
-export const createNewCommand = ({ usecases }: NewCommandDeps) =>
+export const createNewCommand =
+  ({ usecases }: NewCommandDeps) =>
   async (args: string[]): Promise<void> => {
     const { values, positionals } = parseArgs({
       args,

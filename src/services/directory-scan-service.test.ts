@@ -34,10 +34,7 @@ describe("createDirectoryScanService", () => {
     mkdirSync(join(tempHome, "repos", "alpha", ".git"), { recursive: true });
 
     const result = await service.scan();
-    expect(result).toEqual([
-      join(tempHome, "repos", "alpha"),
-      join(tempHome, "repos", "beta"),
-    ]);
+    expect(result).toEqual([join(tempHome, "repos", "alpha"), join(tempHome, "repos", "beta")]);
   });
 
   it(".git がないディレクトリは検出しない", async () => {

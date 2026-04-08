@@ -4,10 +4,7 @@ import {
   type SessionDetectionService,
 } from "./session-detection-service.ts";
 import { createTmuxService, type TmuxService } from "./tmux-service.ts";
-import {
-  createDirectoryScanService,
-  type DirectoryScanService,
-} from "./directory-scan-service.ts";
+import { createDirectoryScanService, type DirectoryScanService } from "./directory-scan-service.ts";
 
 export type ServiceContext = {
   infra: Infra;
