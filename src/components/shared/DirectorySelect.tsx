@@ -2,10 +2,12 @@ import { Box, Text, useApp, useInput } from "ink";
 import { useCallback, useMemo, useState, type FC } from "react";
 import type { SessionGroup } from "../../models/session.ts";
 import { useScroll } from "../../hooks/use-scroll.ts";
+import { formatCwd } from "../../utils/PathUtils.ts";
 
 type Props = {
   sessionGroups: SessionGroup[];
   currentSession: string;
+  sessionPathMap: Map<string, string>;
   isFocused: boolean;
   availableRows: number;
   onSelect: (name: string) => void;
@@ -26,6 +28,7 @@ export const sortSessionGroups = (
 export const SessionListPanel: FC<Props> = ({
   sessionGroups,
   currentSession,
+  sessionPathMap,
   isFocused,
   availableRows,
   onSelect,
@@ -118,13 +121,14 @@ export const SessionListPanel: FC<Props> = ({
           const globalIndex = scrollOffset + i;
           const isHighlighted = globalIndex === clampedCursor;
           const isCurrent = name === currentSession;
+          const path = sessionPathMap.get(name);
           return (
             <Box key={name} paddingLeft={1} gap={1}>
               <Text color={isHighlighted ? "green" : undefined}>
                 {isHighlighted ? "\u25B6" : " "}
               </Text>
               <Text color={isHighlighted ? "green" : "cyan"} bold={isHighlighted} wrap="truncate">
-                {name}
+                {path ? formatCwd(path) : name}
               </Text>
               {isCurrent && <Text color="yellow">(cwd)</Text>}
             </Box>

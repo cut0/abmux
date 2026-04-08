@@ -8,6 +8,7 @@ import {
   type UnifiedPane,
 } from "../models/session.ts";
 import type { TmuxPane } from "../models/tmux.ts";
+import { formatCwd } from "../utils/PathUtils.ts";
 
 export type DetectInput = {
   panes: TmuxPane[];
@@ -76,14 +77,6 @@ export const detectStatusFromText = (paneText: string): SessionStatus => {
   }
 
   return SESSION_STATUS.idle;
-};
-
-const formatCwd = (cwd: string): string => {
-  const home = process.env["HOME"] ?? "";
-  if (home && cwd.startsWith(home)) {
-    return `~${cwd.slice(home.length)}`;
-  }
-  return cwd;
 };
 
 const toUnifiedPane = (pane: TmuxPane): UnifiedPane => {
