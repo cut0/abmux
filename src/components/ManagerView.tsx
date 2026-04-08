@@ -35,16 +35,6 @@ export type ManagerActions = {
   navigateToPane: (up: UnifiedPane) => Promise<void>;
 };
 
-const MODE = {
-  split: "split",
-  confirm: "confirm",
-  promptInput: "promptInput",
-  deleteSession: "deleteSession",
-  addSession: "addSession",
-} as const;
-
-type Mode = (typeof MODE)[keyof typeof MODE];
-
 const FOCUS = {
   left: "left",
   right: "right",
@@ -52,6 +42,13 @@ const FOCUS = {
 } as const;
 
 type Focus = (typeof FOCUS)[keyof typeof FOCUS];
+
+type ViewState =
+  | { mode: "split" }
+  | { mode: "confirm"; prompt: string; cwd: string }
+  | { mode: "promptInput" }
+  | { mode: "deleteSession"; sessionName: string }
+  | { mode: "addSession" };
 
 export type UISnapshot = {
   focus: Focus;
@@ -64,74 +61,84 @@ export type UISnapshot = {
 
 export type UISnapshotRef = { current: UISnapshot | undefined };
 
-type SessionsState = {
+export type RemountState = {
+  prompt?: string;
+  session?: string;
+  cwd?: string;
+  snapshot?: UISnapshot;
+};
+
+type State = {
+  view: ViewState;
+  focus: Focus;
+  selectedSession: string | undefined;
   sessions: ManagedSession[];
-  isLoading: boolean;
+  sessionsLoading: boolean;
+  overviewResult: SessionSummaryResult | undefined;
 };
 
 type Props = {
   actions: ManagerActions;
   currentSession: string;
   directories: string[];
-  restoredPrompt?: string;
-  restoredSession?: string;
-  restoredCwd?: string;
+  remountState?: RemountState;
   snapshotRef: UISnapshotRef;
-  restoredState?: UISnapshot;
 };
 
 const POLL_INTERVAL = 3000;
 const OVERVIEW_POLL_INTERVAL = 60_000;
 
+const initState = (remountState?: RemountState): State => {
+  const snapshot = remountState?.snapshot;
+  return {
+    view: remountState?.prompt
+      ? { mode: "confirm", prompt: remountState.prompt, cwd: remountState.cwd ?? "" }
+      : { mode: "split" },
+    focus: snapshot?.focus ?? FOCUS.left,
+    selectedSession: remountState?.session ?? snapshot?.selectedSession,
+    sessions: [],
+    sessionsLoading: true,
+    overviewResult: snapshot?.overviewResult,
+  };
+};
+
 export const ManagerView: FC<Props> = ({
   actions,
   currentSession,
   directories,
-  restoredPrompt,
-  restoredSession,
-  restoredCwd,
+  remountState,
   snapshotRef,
-  restoredState,
 }) => {
   const { rows, columns } = useTerminalSize();
-  const [sessionsState, setSessionsState] = useState<SessionsState>({
-    sessions: [],
-    isLoading: true,
-  });
-  const [mode, setMode] = useState<Mode>(restoredPrompt ? MODE.confirm : MODE.split);
-  const [focus, setFocus] = useState<Focus>(restoredState?.focus ?? FOCUS.left);
-  const [selectedSession, setSelectedSession] = useState<string | undefined>(
-    restoredSession ?? restoredState?.selectedSession,
-  );
-  const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
-  const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
-  const [overviewResult, setOverviewResult] = useState<SessionSummaryResult>(
-    restoredState?.overviewResult ?? { overallSummary: "", sessions: [] },
-  );
-  const [overviewLoading, setOverviewLoading] = useState(
-    restoredState?.overviewResult ? false : true,
-  );
+  const [state, setState] = useState<State>(() => initState(remountState));
   const overviewInFlightRef = useRef(false);
 
-  const sessionCursorRef = useRef(restoredState?.sessionListCursor ?? 0);
-  const paneCursorRef = useRef(restoredState?.paneListCursor ?? 0);
-  const overviewCursorRef = useRef(restoredState?.overviewCursor ?? 0);
-  const paneRestoredRef = useRef(false);
+  const snapshot = remountState?.snapshot;
+  const cursorsRef = useRef({
+    session: { current: snapshot?.sessionListCursor ?? 0 },
+    pane: { current: snapshot?.paneListCursor ?? 0 },
+    overview: { current: snapshot?.overviewCursor ?? 0 },
+    paneRestored: false,
+  });
+
+  const patch = useCallback((partial: Partial<State>): void => {
+    setState((prev) => ({ ...prev, ...partial }));
+  }, []);
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
       const fetched = await actions.fetchSessions();
-      setSessionsState((prev) => {
+      setState((prev) => {
         const fetchedNames = new Set(fetched.map((s) => s.name));
         const userOnly = prev.sessions.filter(
           (s) => !fetchedNames.has(s.name) && s.groups.length === 0,
         );
-        return { sessions: [...userOnly, ...fetched], isLoading: false };
+        return { ...prev, sessions: [...userOnly, ...fetched], sessionsLoading: false };
       });
     } catch {
-      setSessionsState((prev) => ({ ...prev, isLoading: false }));
+      patch({ sessionsLoading: false });
     }
-  }, [actions]);
+  }, [actions, patch]);
 
   useInterval(() => void refresh(), POLL_INTERVAL);
 
@@ -140,55 +147,58 @@ export const ManagerView: FC<Props> = ({
       if (overviewInFlightRef.current) return;
       overviewInFlightRef.current = true;
       void actions
-        .fetchOverview(sessionsState.sessions)
+        .fetchOverview(state.sessions)
         .then((result) => {
-          setOverviewResult(result);
+          patch({ overviewResult: result });
         })
         .catch(() => {
           // keep previous items
         })
         .finally(() => {
-          setOverviewLoading(false);
           overviewInFlightRef.current = false;
         });
     },
     OVERVIEW_POLL_INTERVAL,
-    !sessionsState.isLoading,
+    !state.sessionsLoading,
   );
 
   useInput(
     (_input, key) => {
       if (key.tab) {
-        setFocus((prev) => {
-          if (prev === FOCUS.left) return FOCUS.right;
-          if (prev === FOCUS.right) return FOCUS.bottom;
-          return FOCUS.left;
+        setState((prev) => {
+          const next =
+            prev.focus === FOCUS.left
+              ? FOCUS.right
+              : prev.focus === FOCUS.right
+                ? FOCUS.bottom
+                : FOCUS.left;
+          return { ...prev, focus: next };
         });
       }
     },
-    { isActive: mode === MODE.split },
+    { isActive: state.view.mode === "split" },
   );
 
-  const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
+  const resolvedSession = state.selectedSession ?? state.sessions[0]?.name;
 
   const paneInitialCursor =
-    !paneRestoredRef.current && restoredState?.selectedSession === resolvedSession
-      ? restoredState?.paneListCursor
+    !cursorsRef.current.paneRestored && snapshot?.selectedSession === resolvedSession
+      ? snapshot?.paneListCursor
       : undefined;
-  if (paneInitialCursor !== undefined) paneRestoredRef.current = true;
+  if (paneInitialCursor !== undefined) cursorsRef.current.paneRestored = true;
 
   snapshotRef.current = {
-    focus,
+    focus: state.focus,
     selectedSession: resolvedSession,
-    sessionListCursor: sessionCursorRef.current,
-    paneListCursor: paneCursorRef.current,
-    overviewCursor: overviewCursorRef.current,
-    overviewResult,
+    sessionListCursor: cursorsRef.current.session.current,
+    paneListCursor: cursorsRef.current.pane.current,
+    overviewCursor: cursorsRef.current.overview.current,
+    overviewResult: state.overviewResult ?? { overallSummary: "", sessions: [] },
   };
 
   const selectedManagedSession = useMemo(
-    () => sessionsState.sessions.find((s) => s.name === resolvedSession),
-    [sessionsState.sessions, resolvedSession],
+    () => state.sessions.find((s) => s.name === resolvedSession),
+    [state.sessions, resolvedSession],
   );
 
   const selectedGroup = useMemo(() => {
@@ -200,8 +210,8 @@ export const ManagerView: FC<Props> = ({
   }, [selectedManagedSession]);
 
   const allGroups = useMemo(
-    () => sessionsState.sessions.flatMap((s) => s.groups),
-    [sessionsState.sessions],
+    () => state.sessions.flatMap((s) => s.groups),
+    [state.sessions],
   );
 
   const statusCounts = useMemo(
@@ -220,63 +230,62 @@ export const ManagerView: FC<Props> = ({
   );
 
   const handleOpenAddSession = useCallback((): void => {
-    setMode(MODE.addSession);
-  }, []);
+    patch({ view: { mode: "addSession" } });
+  }, [patch]);
 
-  const handleAddSessionSelect = useCallback((path: string): void => {
-    const name = basename(path);
-    setSessionsState((prev) => {
-      const exists = prev.sessions.some((s) => s.name === name);
-      if (exists) return prev;
-      return {
-        ...prev,
-        sessions: [{ name, path, groups: [] }, ...prev.sessions],
-      };
-    });
-    setSelectedSession(name);
-    setMode(MODE.split);
-  }, []);
+  const handleAddSessionSelect = useCallback(
+    (path: string): void => {
+      const name = basename(path);
+      setState((prev) => {
+        const exists = prev.sessions.some((s) => s.name === name);
+        return {
+          ...prev,
+          view: { mode: "split" },
+          selectedSession: name,
+          sessions: exists ? prev.sessions : [{ name, path, groups: [] }, ...prev.sessions],
+        };
+      });
+    },
+    [],
+  );
 
   const handleCancelAddSession = useCallback((): void => {
-    setMode(MODE.split);
-  }, []);
+    patch({ view: { mode: "split" } });
+  }, [patch]);
 
-  const handleDeleteSession = useCallback((name: string): void => {
-    setPendingDeleteSession(name);
-    setMode(MODE.deleteSession);
-  }, []);
+  const handleDeleteSession = useCallback(
+    (name: string): void => {
+      patch({ view: { mode: "deleteSession", sessionName: name } });
+    },
+    [patch],
+  );
 
   const handleConfirmDelete = useCallback((): void => {
-    if (!pendingDeleteSession) return;
-    const session = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
-    setSessionsState((prev) => ({
+    if (state.view.mode !== "deleteSession") return;
+    const { sessionName } = state.view;
+    const session = state.sessions.find((s) => s.name === sessionName);
+    setState((prev) => ({
       ...prev,
-      sessions: prev.sessions.filter((s) => s.name !== pendingDeleteSession),
+      view: { mode: "split" },
+      sessions: prev.sessions.filter((s) => s.name !== sessionName),
+      selectedSession:
+        prev.selectedSession === sessionName ? undefined : prev.selectedSession,
     }));
-    if (resolvedSession === pendingDeleteSession) {
-      setSelectedSession(undefined);
-    }
     if (session) {
       const killAll = Promise.all(
         session.groups.map((g) => swallow(() => actions.killSession(g.sessionName))),
       );
       void killAll.then(() => void refresh());
     }
-    setPendingDeleteSession(undefined);
-    setMode(MODE.split);
-  }, [pendingDeleteSession, resolvedSession, sessionsState.sessions, actions, refresh]);
+  }, [state.view, state.sessions, actions, refresh]);
 
   const handleCancelDelete = useCallback((): void => {
-    setPendingDeleteSession(undefined);
-    setMode(MODE.split);
-  }, []);
+    patch({ view: { mode: "split" } });
+  }, [patch]);
 
-  const handleNewSession = useCallback(
-    (_sessionName: string): void => {
-      setMode(MODE.promptInput);
-    },
-    [],
-  );
+  const handleNewSession = useCallback((): void => {
+    patch({ view: { mode: "promptInput" } });
+  }, [patch]);
 
   const handleOpenEditor = useCallback(
     (sessionName: string): void => {
@@ -287,45 +296,48 @@ export const ManagerView: FC<Props> = ({
     [actions, selectedManagedSession],
   );
 
-  const handleConfirmNew = useCallback(
-    ({ worktree }: { worktree: boolean }): void => {
-      if (!resolvedSession) return;
-      const cwd = restoredCwd ?? selectedManagedSession?.path;
-      if (!cwd) return;
-      void actions
-        .createSession(resolvedSession, cwd, pendingPrompt, worktree)
-        .then(() => void refresh());
-      setPendingPrompt("");
-      setMode(MODE.split);
-    },
-    [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh],
-  );
-
   const handlePromptInputSubmit = useCallback(
     (prompt: string): void => {
-      setPendingPrompt(prompt);
-      setMode(MODE.confirm);
+      const cwd = selectedManagedSession?.path;
+      if (!cwd) return;
+      patch({ view: { mode: "confirm", prompt, cwd } });
     },
-    [],
+    [patch, selectedManagedSession],
   );
 
   const handlePromptInputCancel = useCallback((): void => {
-    setMode(MODE.split);
-  }, []);
+    patch({ view: { mode: "split" } });
+  }, [patch]);
+
+  const handleConfirmNew = useCallback(
+    ({ worktree }: { worktree: boolean }): void => {
+      if (state.view.mode !== "confirm") return;
+      if (!resolvedSession) return;
+      void actions
+        .createSession(resolvedSession, state.view.cwd, state.view.prompt, worktree)
+        .then(() => void refresh());
+      patch({ view: { mode: "split" } });
+    },
+    [state.view, resolvedSession, actions, refresh, patch],
+  );
 
   const handleCancelConfirm = useCallback((): void => {
-    setPendingPrompt("");
-    setMode(MODE.split);
-  }, []);
+    patch({ view: { mode: "split" } });
+  }, [patch]);
 
-  const handleSessionSelect = useCallback((name: string): void => {
-    setSelectedSession(name);
-    setFocus(FOCUS.right);
-  }, []);
+  const handleSessionSelect = useCallback(
+    (name: string): void => {
+      patch({ selectedSession: name, focus: FOCUS.right });
+    },
+    [patch],
+  );
 
-  const handleSessionCursorChange = useCallback((name: string): void => {
-    setSelectedSession(name);
-  }, []);
+  const handleSessionCursorChange = useCallback(
+    (name: string): void => {
+      patch({ selectedSession: name });
+    },
+    [patch],
+  );
 
   const handleNavigate = useCallback(
     (up: UnifiedPane): void => {
@@ -335,8 +347,8 @@ export const ManagerView: FC<Props> = ({
   );
 
   const handleBack = useCallback((): void => {
-    setFocus(FOCUS.left);
-  }, []);
+    patch({ focus: FOCUS.left });
+  }, [patch]);
 
   const handleKillPane = useCallback(
     async (paneId: string): Promise<void> => {
@@ -360,7 +372,7 @@ export const ManagerView: FC<Props> = ({
     [actions],
   );
 
-  if (sessionsState.isLoading) {
+  if (state.sessionsLoading) {
     return (
       <Box flexDirection="column" height={rows}>
         <Header title={`${APP_TITLE} v${APP_VERSION}`} />
@@ -369,7 +381,7 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  if (mode === MODE.addSession) {
+  if (state.view.mode === "addSession") {
     return (
       <DirectorySearchView
         directories={directories}
@@ -379,8 +391,9 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  if (mode === MODE.deleteSession && pendingDeleteSession) {
-    const deleteSession = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
+  if (state.view.mode === "deleteSession") {
+    const { sessionName } = state.view;
+    const deleteSession = state.sessions.find((s) => s.name === sessionName);
     const paneCount =
       deleteSession?.groups.reduce(
         (sum, g) => sum + g.tabs.reduce((s, t) => s + t.panes.length, 0),
@@ -388,7 +401,7 @@ export const ManagerView: FC<Props> = ({
       ) ?? 0;
     return (
       <DeleteSessionView
-        sessionName={pendingDeleteSession}
+        sessionName={sessionName}
         paneCount={paneCount}
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
@@ -396,7 +409,7 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  if (mode === MODE.promptInput) {
+  if (state.view.mode === "promptInput") {
     return (
       <PromptInputView
         selectedDir={resolvedSession ?? ""}
@@ -406,11 +419,11 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  if (mode === MODE.confirm && pendingPrompt) {
+  if (state.view.mode === "confirm") {
     return (
       <ConfirmView
         selectedDir={resolvedSession ?? ""}
-        prompt={pendingPrompt}
+        prompt={state.view.prompt}
         onConfirm={handleConfirmNew}
         onCancel={handleCancelConfirm}
       />
@@ -432,31 +445,31 @@ export const ManagerView: FC<Props> = ({
           flexDirection="column"
           width={leftWidth}
           borderStyle="round"
-          borderColor={focus === FOCUS.left ? "green" : "gray"}
+          borderColor={state.focus === FOCUS.left ? "green" : "gray"}
         >
           <SessionListPanel
-            sessions={sessionsState.sessions}
+            sessions={state.sessions}
             currentSession={currentSession}
-            isFocused={focus === FOCUS.left}
+            isFocused={state.focus === FOCUS.left}
             availableRows={topHeight - 2}
             onSelect={handleSessionSelect}
             onCursorChange={handleSessionCursorChange}
             onDeleteSession={handleDeleteSession}
             onAddSession={handleOpenAddSession}
-            initialCursor={restoredState?.sessionListCursor}
-            cursorRef={sessionCursorRef}
+            initialCursor={snapshot?.sessionListCursor}
+            cursorRef={cursorsRef.current.session}
           />
         </Box>
         <Box
           flexDirection="column"
           width={rightWidth}
           borderStyle="round"
-          borderColor={focus === FOCUS.right ? "green" : "gray"}
+          borderColor={state.focus === FOCUS.right ? "green" : "gray"}
         >
           <PaneListPanel
             selectedSession={resolvedSession}
             group={selectedGroup}
-            isFocused={focus === FOCUS.right}
+            isFocused={state.focus === FOCUS.right}
             availableRows={topHeight - 2}
             onNavigate={handleNavigate}
             onHighlight={handleHighlight}
@@ -466,26 +479,26 @@ export const ManagerView: FC<Props> = ({
             onOpenEditor={handleOpenEditor}
             onKillPane={handleKillPane}
             initialCursor={paneInitialCursor}
-            cursorRef={paneCursorRef}
+            cursorRef={cursorsRef.current.pane}
           />
         </Box>
       </Box>
       <SessionOverviewPanel
-        overallSummary={overviewResult.overallSummary}
-        items={overviewResult.sessions}
+        overallSummary={state.overviewResult?.overallSummary ?? ""}
+        items={state.overviewResult?.sessions ?? []}
         groups={allGroups}
-        isLoading={overviewLoading}
-        isFocused={focus === FOCUS.bottom}
+        isLoading={!state.overviewResult}
+        isFocused={state.focus === FOCUS.bottom}
         availableRows={bottomHeight}
         onBack={handleBack}
-        initialCursor={restoredState?.overviewCursor}
-        cursorRef={overviewCursorRef}
+        initialCursor={snapshot?.overviewCursor}
+        cursorRef={cursorsRef.current.overview}
       />
       <StatusBar
         message={
-          focus === FOCUS.left
+          state.focus === FOCUS.left
             ? "\u2191/\u2193 move  Enter/\u2192 select  Tab next  n add  d delete  q quit"
-            : focus === FOCUS.right
+            : state.focus === FOCUS.right
               ? "\u2191/\u2193 move  Enter focus  Tab next  n new  v vim  d kill  Esc/\u2190 back  q quit"
               : "\u2191/\u2193 scroll  Tab next  Esc/\u2190 back  q quit"
         }
