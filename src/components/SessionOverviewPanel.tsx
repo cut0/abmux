@@ -39,27 +39,18 @@ export const SessionOverviewPanel: FC<Props> = ({
   const [cursor, setCursor] = useState(0);
 
   const lines = useMemo((): OverviewLine[] => {
-    const result: OverviewLine[] = [];
+    const summaryLines: OverviewLine[] = overallSummary
+      ? [
+          { key: "summary", type: "summary", text: overallSummary },
+          { key: "spacer:summary", type: "spacer" },
+        ]
+      : [];
 
-    if (overallSummary) {
-      result.push({ key: "summary", type: "summary", text: overallSummary });
-      result.push({ key: "spacer:summary", type: "spacer" });
-    }
-
-    for (const [idx, item] of items.entries()) {
-      if (idx > 0) {
-        result.push({ key: `spacer:${item.sessionName}`, type: "spacer" });
-      }
-      result.push({
-        key: `s:${item.sessionName}`,
-        type: "session",
-        sessionName: item.sessionName,
-      });
-
+    const sessionLines = items.flatMap((item, idx): OverviewLine[] => {
       const group = groups.find((g) => g.sessionName === item.sessionName);
       const allPanes = group?.tabs.flatMap((t) => t.panes) ?? [];
 
-      for (const paneSummary of item.panes) {
+      const paneLines: OverviewLine[] = item.panes.map((paneSummary) => {
         const matched = allPanes.find(
           (p) => (p.claudeTitle ?? p.pane.title) === paneSummary.paneTitle,
         );
@@ -69,17 +60,26 @@ export const SessionOverviewPanel: FC<Props> = ({
         const statusColor = matched?.claudeStatus
           ? SESSION_STATUS_COLOR[matched.claudeStatus]
           : undefined;
-
-        result.push({
+        return {
           key: `p:${item.sessionName}:${paneSummary.paneTitle}`,
-          type: "pane",
+          type: "pane" as const,
           statusLabel,
           statusColor,
           description: paneSummary.description,
-        });
-      }
-    }
-    return result;
+        };
+      });
+
+      const spacer: OverviewLine[] =
+        idx > 0 ? [{ key: `spacer:${item.sessionName}`, type: "spacer" }] : [];
+
+      return [
+        ...spacer,
+        { key: `s:${item.sessionName}`, type: "session", sessionName: item.sessionName },
+        ...paneLines,
+      ];
+    });
+
+    return [...summaryLines, ...sessionLines];
   }, [overallSummary, items, groups]);
 
   const clampedCursor = cursor >= lines.length ? Math.max(0, lines.length - 1) : cursor;

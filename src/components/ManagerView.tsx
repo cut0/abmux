@@ -147,19 +147,19 @@ export const ManagerView: FC<Props> = ({
     [sessionsState.sessions],
   );
 
-  const statusCounts = useMemo((): Partial<Record<SessionStatus, number>> => {
-    const counts: Partial<Record<SessionStatus, number>> = {};
-    for (const group of allGroups) {
-      for (const tab of group.tabs) {
-        for (const pane of tab.panes) {
-          if (pane.kind === "claude" && pane.claudeStatus) {
-            counts[pane.claudeStatus] = (counts[pane.claudeStatus] ?? 0) + 1;
-          }
-        }
-      }
-    }
-    return counts;
-  }, [allGroups]);
+  const statusCounts = useMemo(
+    (): Partial<Record<SessionStatus, number>> =>
+      allGroups
+        .flatMap((g) => g.tabs)
+        .flatMap((t) => t.panes)
+        .filter((p) => p.kind === "claude" && p.claudeStatus)
+        .reduce<Partial<Record<SessionStatus, number>>>((acc, p) => {
+          const s = p.claudeStatus;
+          if (!s) return acc;
+          return { ...acc, [s]: (acc[s] ?? 0) + 1 };
+        }, {}),
+    [allGroups],
+  );
 
   const handleOpenAddSession = useCallback((): void => {
     setMode(MODE.addSession);
