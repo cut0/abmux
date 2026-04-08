@@ -14,6 +14,7 @@ type Props = {
   onUnhighlight: (up: UnifiedPane) => void;
   onBack: () => void;
   onNewSession: (sessionName: string) => void;
+  onOpenEditor: (sessionName: string) => void;
   onKillPane: (paneId: string) => Promise<void>;
   initialCursor?: number;
   cursorRef?: { current: number };
@@ -29,6 +30,7 @@ export const PaneListView: FC<Props> = ({
   onUnhighlight,
   onBack,
   onNewSession,
+  onOpenEditor,
   onKillPane,
   initialCursor,
   cursorRef,
@@ -124,6 +126,11 @@ export const PaneListView: FC<Props> = ({
         return;
       }
 
+      if (input === "v") {
+        onOpenEditor(selectedSession);
+        return;
+      }
+
       if (key.return) {
         const pane = panes[clampedCursor];
         if (pane) onNavigate(pane);
@@ -146,7 +153,7 @@ export const PaneListView: FC<Props> = ({
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
         {panes.length === 0 ? (
           <Box paddingLeft={1}>
-            <Text dimColor>No panes. Press n to create.</Text>
+            <Text dimColor>No panes. Press n or v to create.</Text>
           </Box>
         ) : (
           visiblePanes.map((up, i) => (
