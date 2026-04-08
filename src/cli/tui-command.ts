@@ -26,7 +26,7 @@ export const createTuiCommand =
     const actions: ManagerActions = {
       fetchSessions: async (): Promise<ManagedSession[]> => {
         const result = await usecases.manager.list();
-        return await Promise.all(
+        const resolved = await Promise.all(
           result.sessionGroups.map(async (group) => {
             const enrichedGroup = {
               sessionName: group.sessionName,
@@ -42,9 +42,24 @@ export const createTuiCommand =
             };
             const paneCwd = group.tabs[0]?.panes[0]?.pane.cwd ?? "";
             const path = findMatchingDirectory(paneCwd, directories) ?? paneCwd;
-            return { name: group.sessionName, path, group: enrichedGroup };
+            return { path, group: enrichedGroup };
           }),
         );
+        const byPath = new Map<string, ManagedSession>();
+        for (const item of resolved) {
+          const key = item.path || item.group.sessionName;
+          const existing = byPath.get(key);
+          if (existing) {
+            byPath.set(key, { ...existing, groups: [...existing.groups, item.group] });
+          } else {
+            byPath.set(key, {
+              name: basename(item.path) || item.group.sessionName,
+              path: item.path,
+              groups: [item.group],
+            });
+          }
+        }
+        return [...byPath.values()];
       },
       createSession: async (sessionName: string, cwd: string, prompt: string): Promise<void> => {
         await usecases.manager.createSession({ sessionName, cwd, prompt });

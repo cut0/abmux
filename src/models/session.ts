@@ -61,5 +61,5 @@ export type SessionGroup = {
 export type ManagedSession = {
   name: string;
   path: string;
-  group: SessionGroup;
+  groups: SessionGroup[];
 };

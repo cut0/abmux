@@ -81,7 +81,7 @@ export const ManagerView: FC<Props> = ({
       setSessionsState((prev) => {
         const fetchedNames = new Set(fetched.map((s) => s.name));
         const userOnly = prev.sessions.filter(
-          (s) => !fetchedNames.has(s.name) && s.group.tabs.length === 0,
+          (s) => !fetchedNames.has(s.name) && s.groups.length === 0,
         );
         return { sessions: [...userOnly, ...fetched], isLoading: false };
       });
@@ -107,6 +107,14 @@ export const ManagerView: FC<Props> = ({
     [sessionsState.sessions, resolvedSession],
   );
 
+  const selectedGroup = useMemo(() => {
+    if (!selectedManagedSession) return undefined;
+    return {
+      sessionName: selectedManagedSession.name,
+      tabs: selectedManagedSession.groups.flatMap((g) => g.tabs),
+    };
+  }, [selectedManagedSession]);
+
   const handleOpenAddSession = useCallback((): void => {
     setMode(MODE.addSession);
   }, []);
@@ -118,7 +126,7 @@ export const ManagerView: FC<Props> = ({
       if (exists) return prev;
       return {
         ...prev,
-        sessions: [{ name, path, group: { sessionName: name, tabs: [] } }, ...prev.sessions],
+        sessions: [{ name, path, groups: [] }, ...prev.sessions],
       };
     });
     setSelectedSession(name);
@@ -136,6 +144,7 @@ export const ManagerView: FC<Props> = ({
 
   const handleConfirmDelete = useCallback((): void => {
     if (!pendingDeleteSession) return;
+    const session = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
     setSessionsState((prev) => ({
       ...prev,
       sessions: prev.sessions.filter((s) => s.name !== pendingDeleteSession),
@@ -143,10 +152,15 @@ export const ManagerView: FC<Props> = ({
     if (resolvedSession === pendingDeleteSession) {
       setSelectedSession(undefined);
     }
-    void swallow(() => actions.killSession(pendingDeleteSession)).then(() => void refresh());
+    if (session) {
+      const killAll = Promise.all(
+        session.groups.map((g) => swallow(() => actions.killSession(g.sessionName))),
+      );
+      void killAll.then(() => void refresh());
+    }
     setPendingDeleteSession(undefined);
     setMode(MODE.split);
-  }, [pendingDeleteSession, resolvedSession, actions, refresh]);
+  }, [pendingDeleteSession, resolvedSession, sessionsState.sessions, actions, refresh]);
 
   const handleCancelDelete = useCallback((): void => {
     setPendingDeleteSession(undefined);
@@ -236,7 +250,11 @@ export const ManagerView: FC<Props> = ({
 
   if (mode === MODE.deleteSession && pendingDeleteSession) {
     const deleteSession = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
-    const paneCount = deleteSession?.group.tabs.reduce((sum, t) => sum + t.panes.length, 0) ?? 0;
+    const paneCount =
+      deleteSession?.groups.reduce(
+        (sum, g) => sum + g.tabs.reduce((s, t) => s + t.panes.length, 0),
+        0,
+      ) ?? 0;
     return (
       <DeleteSessionView
         sessionName={pendingDeleteSession}
@@ -291,7 +309,7 @@ export const ManagerView: FC<Props> = ({
         >
           <PaneListPanel
             selectedSession={resolvedSession}
-            group={selectedManagedSession?.group}
+            group={selectedGroup}
             isFocused={focus === FOCUS.right}
             availableRows={panelHeight}
             onNavigate={handleNavigate}
