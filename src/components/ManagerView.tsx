@@ -87,6 +87,9 @@ type Props = {
 
 const POLL_INTERVAL = 3000;
 const OVERVIEW_POLL_INTERVAL = 60_000;
+const FIXED_ROWS = 3; // Header(1 + marginBottom 1) + StatusBar(1)
+const TOP_HEIGHT_RATIO = 1 / 2;
+const LEFT_WIDTH_RATIO = 1 / 3;
 
 const initState = (remountState?: RemountState): State => {
   const snapshot = remountState?.snapshot;
@@ -118,7 +121,6 @@ export const ManagerView: FC<Props> = ({
     session: { current: snapshot?.sessionListCursor ?? 0 },
     pane: { current: snapshot?.paneListCursor ?? 0 },
     overview: { current: snapshot?.overviewCursor ?? 0 },
-    paneRestored: false,
   });
 
   const patch = useCallback((partial: Partial<State>): void => {
@@ -180,12 +182,6 @@ export const ManagerView: FC<Props> = ({
   );
 
   const resolvedSession = state.selectedSession ?? state.sessions[0]?.name;
-
-  const paneInitialCursor =
-    !cursorsRef.current.paneRestored && snapshot?.selectedSession === resolvedSession
-      ? snapshot?.paneListCursor
-      : undefined;
-  if (paneInitialCursor !== undefined) cursorsRef.current.paneRestored = true;
 
   snapshotRef.current = {
     focus: state.focus,
@@ -430,11 +426,10 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  const fixedRows = 3; // Header(1 + marginBottom 1) + StatusBar(1)
-  const contentHeight = rows - fixedRows;
-  const topHeight = Math.floor(contentHeight / 2);
+  const contentHeight = rows - FIXED_ROWS;
+  const topHeight = Math.floor(contentHeight * TOP_HEIGHT_RATIO);
   const bottomHeight = contentHeight - topHeight;
-  const leftWidth = Math.floor(columns / 3);
+  const leftWidth = Math.floor(columns * LEFT_WIDTH_RATIO);
   const rightWidth = columns - leftWidth;
 
   return (
@@ -456,7 +451,6 @@ export const ManagerView: FC<Props> = ({
             onCursorChange={handleSessionCursorChange}
             onDeleteSession={handleDeleteSession}
             onAddSession={handleOpenAddSession}
-            initialCursor={snapshot?.sessionListCursor}
             cursorRef={cursorsRef.current.session}
           />
         </Box>
@@ -478,7 +472,6 @@ export const ManagerView: FC<Props> = ({
             onNewSession={handleNewSession}
             onOpenEditor={handleOpenEditor}
             onKillPane={handleKillPane}
-            initialCursor={paneInitialCursor}
             cursorRef={cursorsRef.current.pane}
           />
         </Box>
@@ -491,7 +484,6 @@ export const ManagerView: FC<Props> = ({
         isFocused={state.focus === FOCUS.bottom}
         availableRows={bottomHeight}
         onBack={handleBack}
-        initialCursor={snapshot?.overviewCursor}
         cursorRef={cursorsRef.current.overview}
       />
       <StatusBar

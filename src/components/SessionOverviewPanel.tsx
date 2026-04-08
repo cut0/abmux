@@ -14,7 +14,6 @@ type Props = {
   isFocused: boolean;
   availableRows: number;
   onBack: () => void;
-  initialCursor?: number;
   cursorRef?: { current: number };
 };
 
@@ -36,11 +35,10 @@ export const SessionOverviewPanel: FC<Props> = ({
   isFocused,
   availableRows,
   onBack,
-  initialCursor,
   cursorRef,
 }) => {
   const { exit } = useApp();
-  const [cursor, setCursor] = useState(initialCursor ?? 0);
+  const [cursor, setCursor] = useState(cursorRef?.current ?? 0);
 
   const lines = useMemo((): OverviewLine[] => {
     const summaryLines: OverviewLine[] = overallSummary

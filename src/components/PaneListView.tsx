@@ -16,7 +16,6 @@ type Props = {
   onNewSession: (sessionName: string) => void;
   onOpenEditor: (sessionName: string) => void;
   onKillPane: (paneId: string) => Promise<void>;
-  initialCursor?: number;
   cursorRef?: { current: number };
 };
 
@@ -32,11 +31,10 @@ export const PaneListView: FC<Props> = ({
   onNewSession,
   onOpenEditor,
   onKillPane,
-  initialCursor,
   cursorRef,
 }) => {
   const { exit } = useApp();
-  const [cursor, setCursor] = useState(initialCursor ?? 0);
+  const [cursor, setCursor] = useState(cursorRef?.current ?? 0);
   const highlightedRef = useRef<UnifiedPane | undefined>(undefined);
 
   const panes = useMemo(() => group.tabs.flatMap((t) => t.panes), [group]);
