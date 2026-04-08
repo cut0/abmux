@@ -110,7 +110,7 @@ export const ManagerView: FC<Props> = ({
   const sessionPathMap = useMemo((): Map<string, string> => {
     const map = new Map<string, string>();
     for (const group of fetchState.data) {
-      const fromMap = sessionCwdMap.current.get(group.sessionName);
+      const fromMap = sessionCwdMap.get(group.sessionName);
       const fromPane = group.tabs[0]?.panes[0]?.pane.cwd;
       const path = fromMap ?? fromPane;
       if (path) map.set(group.sessionName, path);
