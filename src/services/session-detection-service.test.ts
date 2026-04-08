@@ -29,7 +29,13 @@ describe("createSessionDetectionService", () => {
   describe("groupBySession", () => {
     it("ペインを UnifiedPane に変換してディレクトリ > ウィンドウでグループ化する", () => {
       const panes = [
-        mockPane({ title: "\u2733 API実装", paneId: "%1", paneIndex: 0, windowIndex: 0, cwd: "/project-a" }),
+        mockPane({
+          title: "\u2733 API実装",
+          paneId: "%1",
+          paneIndex: 0,
+          windowIndex: 0,
+          cwd: "/project-a",
+        }),
         mockPane({ title: "zsh", paneId: "%2", paneIndex: 1, windowIndex: 0, cwd: "/project-a" }),
         mockPane({ title: "nvim", paneId: "%3", paneIndex: 2, windowIndex: 0, cwd: "/project-a" }),
       ];

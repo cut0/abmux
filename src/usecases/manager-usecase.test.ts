@@ -73,7 +73,11 @@ describe("createManagerUsecase", () => {
     mockTmuxCli = createMockTmuxCli();
     mockSessionDetection = createMockSessionDetectionService();
     usecase = createManagerUsecase({
-      services: { tmux: mockTmux, sessionDetection: mockSessionDetection, directoryScan: { scan: vi.fn().mockResolvedValue([]) } },
+      services: {
+        tmux: mockTmux,
+        sessionDetection: mockSessionDetection,
+        directoryScan: { scan: vi.fn().mockResolvedValue([]) },
+      },
       infra: { tmuxCli: mockTmuxCli, editor: { open: () => undefined } },
     });
   });
@@ -128,7 +132,11 @@ describe("createManagerUsecase", () => {
       vi.mocked(mockTmuxCli.listPanes).mockResolvedValue([
         mockPane({ sessionName: "my-project", paneId: "%10", windowIndex: 0, paneIndex: 0 }),
       ]);
-      await usecase.createSession({ sessionName: "my-project", cwd: "/home/user/my-project", prompt: "テスト" });
+      await usecase.createSession({
+        sessionName: "my-project",
+        cwd: "/home/user/my-project",
+        prompt: "テスト",
+      });
       expect(mockTmuxCli.newSession).toHaveBeenCalled();
       expect(mockTmux.sendCommand).toHaveBeenCalledWith({
         target: "%10",
@@ -141,7 +149,11 @@ describe("createManagerUsecase", () => {
       vi.mocked(mockTmuxCli.listPanes).mockResolvedValue([
         mockPane({ sessionName: "my-project", paneId: "%11", windowIndex: 1, paneIndex: 0 }),
       ]);
-      await usecase.createSession({ sessionName: "my-project", cwd: "/home/user/my-project", prompt: "テスト" });
+      await usecase.createSession({
+        sessionName: "my-project",
+        cwd: "/home/user/my-project",
+        prompt: "テスト",
+      });
       expect(mockTmuxCli.newSession).not.toHaveBeenCalled();
       expect(mockTmuxCli.newWindow).toHaveBeenCalled();
     });
@@ -151,7 +163,11 @@ describe("createManagerUsecase", () => {
       vi.mocked(mockTmuxCli.listPanes).mockResolvedValue([
         mockPane({ sessionName: "proj", paneId: "%7", windowIndex: 0, paneIndex: 0 }),
       ]);
-      await usecase.createSession({ sessionName: "proj", cwd: "/home/user/proj", prompt: "it's a $test" });
+      await usecase.createSession({
+        sessionName: "proj",
+        cwd: "/home/user/proj",
+        prompt: "it's a $test",
+      });
       expect(mockTmux.sendCommand).toHaveBeenCalledWith({
         target: "%7",
         command: "claude -w -- 'it'\\''s a $test'",
@@ -187,5 +203,4 @@ describe("createManagerUsecase", () => {
       expect(mockTmux.killSession).toHaveBeenCalledWith("my-session");
     });
   });
-
 });

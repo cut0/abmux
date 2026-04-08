@@ -11,12 +11,7 @@ type Props = {
   onCancel: () => void;
 };
 
-export const DeleteSessionView: FC<Props> = ({
-  sessionName,
-  paneCount,
-  onConfirm,
-  onCancel,
-}) => {
+export const DeleteSessionView: FC<Props> = ({ sessionName, paneCount, onConfirm, onCancel }) => {
   const { rows } = useTerminalSize();
 
   useInput((_input, key) => {

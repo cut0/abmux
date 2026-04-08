@@ -101,8 +101,7 @@ const toUnifiedPane = (pane: TmuxPane): UnifiedPane => {
 
 export const createSessionDetectionService = (): SessionDetectionService => ({
   groupBySession: ({ panes }: DetectInput): SessionGroup[] => {
-    const windowKey = (pane: TmuxPane): string =>
-      `${pane.sessionName}:${String(pane.windowIndex)}`;
+    const windowKey = (pane: TmuxPane): string => `${pane.sessionName}:${String(pane.windowIndex)}`;
 
     const windowMap = new Map<
       string,

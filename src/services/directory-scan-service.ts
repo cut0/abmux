@@ -36,7 +36,9 @@ const findProjects = async (dir: string, depth: number): Promise<string[]> => {
 
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    const dirs = entries.filter((e) => e.isDirectory() && !e.name.startsWith(".") && !SKIP_DIRS.has(e.name));
+    const dirs = entries.filter(
+      (e) => e.isDirectory() && !e.name.startsWith(".") && !SKIP_DIRS.has(e.name),
+    );
 
     const results: string[] = [];
     const childScans: Promise<string[]>[] = [];

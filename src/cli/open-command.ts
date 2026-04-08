@@ -5,7 +5,8 @@ type OpenCommandDeps = {
   infra: Pick<Infra, "tmuxCli">;
 };
 
-export const createOpenCommand = ({ infra }: OpenCommandDeps) =>
+export const createOpenCommand =
+  ({ infra }: OpenCommandDeps) =>
   async (args: string[]): Promise<void> => {
     const session = args[0] ?? basename(process.cwd());
 

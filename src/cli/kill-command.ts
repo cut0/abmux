@@ -5,7 +5,8 @@ type KillCommandDeps = {
   usecases: Pick<Usecases, "manager">;
 };
 
-export const createKillCommand = ({ usecases }: KillCommandDeps) =>
+export const createKillCommand =
+  ({ usecases }: KillCommandDeps) =>
   async (args: string[]): Promise<void> => {
     const session = args[0] ?? basename(process.cwd());
 
