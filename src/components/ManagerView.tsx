@@ -1,7 +1,7 @@
 import { basename } from "node:path";
 import { Box, Text } from "ink";
 import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-import type { SessionGroup, UnifiedPane } from "../models/session.ts";
+import type { ManagedSession, UnifiedPane } from "../models/session.ts";
 import { Header } from "./shared/Header.tsx";
 import { StatusBar } from "./shared/StatusBar.tsx";
 import { SessionListPanel } from "./shared/DirectorySelect.tsx";
@@ -14,13 +14,13 @@ import { APP_TITLE, APP_VERSION } from "../constants.ts";
 import { swallow } from "../utils/PromiseUtils.ts";
 
 export type ManagerActions = {
-  fetchSessions: () => Promise<SessionGroup[]>;
+  fetchSessions: () => Promise<ManagedSession[]>;
   createSession: (sessionName: string, cwd: string, prompt: string) => Promise<void>;
   killSession: (sessionName: string) => Promise<void>;
   killPane: (paneId: string) => Promise<void>;
   highlightWindow: (up: UnifiedPane) => Promise<void>;
   unhighlightWindow: (up: UnifiedPane) => Promise<void>;
-  openEditor: (sessionName: string) => string | undefined;
+  openEditor: (sessionName: string, cwd: string) => string | undefined;
   navigateToPane: (up: UnifiedPane) => Promise<void>;
 };
 
@@ -40,19 +40,18 @@ const FOCUS = {
 
 type Focus = (typeof FOCUS)[keyof typeof FOCUS];
 
-type FetchState = {
-  data: SessionGroup[];
+type SessionsState = {
+  sessions: ManagedSession[];
   isLoading: boolean;
 };
 
 type Props = {
   actions: ManagerActions;
   currentSession: string;
-  currentCwd: string;
   directories: string[];
-  sessionCwdMap: Map<string, string>;
   restoredPrompt?: string;
   restoredSession?: string;
+  restoredCwd?: string;
 };
 
 const POLL_INTERVAL = 3000;
@@ -60,14 +59,16 @@ const POLL_INTERVAL = 3000;
 export const ManagerView: FC<Props> = ({
   actions,
   currentSession,
-  currentCwd,
   directories,
-  sessionCwdMap,
   restoredPrompt,
   restoredSession,
+  restoredCwd,
 }) => {
   const { rows, columns } = useTerminalSize();
-  const [fetchState, setFetchState] = useState<FetchState>({ data: [], isLoading: true });
+  const [sessionsState, setSessionsState] = useState<SessionsState>({
+    sessions: [],
+    isLoading: true,
+  });
   const [mode, setMode] = useState<Mode>(restoredPrompt ? MODE.confirm : MODE.split);
   const [focus, setFocus] = useState<Focus>(FOCUS.left);
   const [selectedSession, setSelectedSession] = useState<string | undefined>(restoredSession);
@@ -76,17 +77,16 @@ export const ManagerView: FC<Props> = ({
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
-      const groups = await actions.fetchSessions();
-      const knownNames = new Set(groups.map((g) => g.sessionName));
-      const missing: SessionGroup[] = [];
-      for (const name of sessionCwdMap.keys()) {
-        if (!knownNames.has(name)) {
-          missing.push({ sessionName: name, tabs: [] });
-        }
-      }
-      setFetchState({ data: [...missing, ...groups], isLoading: false });
+      const fetched = await actions.fetchSessions();
+      setSessionsState((prev) => {
+        const fetchedNames = new Set(fetched.map((s) => s.name));
+        const userOnly = prev.sessions.filter(
+          (s) => !fetchedNames.has(s.name) && s.groups.length === 0,
+        );
+        return { sessions: [...userOnly, ...fetched], isLoading: false };
+      });
     } catch {
-      setFetchState((prev) => ({ ...prev, isLoading: false }));
+      setSessionsState((prev) => ({ ...prev, isLoading: false }));
     }
   }, [actions]);
 
@@ -100,44 +100,38 @@ export const ManagerView: FC<Props> = ({
     };
   }, [refresh]);
 
-  const resolvedSession = selectedSession ?? fetchState.data[0]?.sessionName;
+  const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
 
-  const selectedGroup = useMemo(
-    () => fetchState.data.find((g) => g.sessionName === resolvedSession),
-    [fetchState.data, resolvedSession],
+  const selectedManagedSession = useMemo(
+    () => sessionsState.sessions.find((s) => s.name === resolvedSession),
+    [sessionsState.sessions, resolvedSession],
   );
 
-  const sessionPathMap = useMemo((): Map<string, string> => {
-    const map = new Map<string, string>();
-    for (const group of fetchState.data) {
-      const fromMap = sessionCwdMap.get(group.sessionName);
-      const fromPane = group.tabs[0]?.panes[0]?.pane.cwd;
-      const path = fromMap ?? fromPane;
-      if (path) map.set(group.sessionName, path);
-    }
-    return map;
-  }, [fetchState.data]);
+  const selectedGroup = useMemo(() => {
+    if (!selectedManagedSession) return undefined;
+    return {
+      sessionName: selectedManagedSession.name,
+      tabs: selectedManagedSession.groups.flatMap((g) => g.tabs),
+    };
+  }, [selectedManagedSession]);
 
   const handleOpenAddSession = useCallback((): void => {
     setMode(MODE.addSession);
   }, []);
 
-  const handleAddSessionSelect = useCallback(
-    (path: string): void => {
-      const name = basename(path);
-      sessionCwdMap.set(name, path);
-      const exists = fetchState.data.some((g) => g.sessionName === name);
-      if (!exists) {
-        setFetchState((prev) => ({
-          ...prev,
-          data: [{ sessionName: name, tabs: [] }, ...prev.data],
-        }));
-      }
-      setSelectedSession(name);
-      setMode(MODE.split);
-    },
-    [fetchState.data],
-  );
+  const handleAddSessionSelect = useCallback((path: string): void => {
+    const name = basename(path);
+    setSessionsState((prev) => {
+      const exists = prev.sessions.some((s) => s.name === name);
+      if (exists) return prev;
+      return {
+        ...prev,
+        sessions: [{ name, path, groups: [] }, ...prev.sessions],
+      };
+    });
+    setSelectedSession(name);
+    setMode(MODE.split);
+  }, []);
 
   const handleCancelAddSession = useCallback((): void => {
     setMode(MODE.split);
@@ -150,14 +144,23 @@ export const ManagerView: FC<Props> = ({
 
   const handleConfirmDelete = useCallback((): void => {
     if (!pendingDeleteSession) return;
-    sessionCwdMap.delete(pendingDeleteSession);
+    const session = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
+    setSessionsState((prev) => ({
+      ...prev,
+      sessions: prev.sessions.filter((s) => s.name !== pendingDeleteSession),
+    }));
     if (resolvedSession === pendingDeleteSession) {
       setSelectedSession(undefined);
     }
-    void swallow(() => actions.killSession(pendingDeleteSession)).then(() => void refresh());
+    if (session) {
+      const killAll = Promise.all(
+        session.groups.map((g) => swallow(() => actions.killSession(g.sessionName))),
+      );
+      void killAll.then(() => void refresh());
+    }
     setPendingDeleteSession(undefined);
     setMode(MODE.split);
-  }, [pendingDeleteSession, resolvedSession, actions, refresh]);
+  }, [pendingDeleteSession, resolvedSession, sessionsState.sessions, actions, refresh]);
 
   const handleCancelDelete = useCallback((): void => {
     setPendingDeleteSession(undefined);
@@ -166,19 +169,21 @@ export const ManagerView: FC<Props> = ({
 
   const handleNewSession = useCallback(
     (sessionName: string): void => {
-      actions.openEditor(sessionName);
+      const cwd = selectedManagedSession?.path;
+      if (!cwd) return;
+      actions.openEditor(sessionName, cwd);
     },
-    [actions],
+    [actions, selectedManagedSession],
   );
 
   const handleConfirmNew = useCallback((): void => {
     if (!resolvedSession) return;
-    const existingCwd = selectedGroup?.tabs[0]?.panes[0]?.pane.cwd;
-    const cwd = sessionCwdMap.get(resolvedSession) ?? existingCwd ?? currentCwd;
+    const cwd = restoredCwd ?? selectedManagedSession?.path;
+    if (!cwd) return;
     void actions.createSession(resolvedSession, cwd, pendingPrompt).then(() => void refresh());
     setPendingPrompt("");
     setMode(MODE.split);
-  }, [resolvedSession, selectedGroup, currentCwd, pendingPrompt, actions, refresh]);
+  }, [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh]);
 
   const handleCancelConfirm = useCallback((): void => {
     setPendingPrompt("");
@@ -227,7 +232,7 @@ export const ManagerView: FC<Props> = ({
     [actions],
   );
 
-  if (fetchState.isLoading) {
+  if (sessionsState.isLoading) {
     return (
       <Box flexDirection="column" height={rows}>
         <Header title={`${APP_TITLE} v${APP_VERSION}`} />
@@ -247,8 +252,12 @@ export const ManagerView: FC<Props> = ({
   }
 
   if (mode === MODE.deleteSession && pendingDeleteSession) {
-    const deleteGroup = fetchState.data.find((g) => g.sessionName === pendingDeleteSession);
-    const paneCount = deleteGroup?.tabs.reduce((sum, t) => sum + t.panes.length, 0) ?? 0;
+    const deleteSession = sessionsState.sessions.find((s) => s.name === pendingDeleteSession);
+    const paneCount =
+      deleteSession?.groups.reduce(
+        (sum, g) => sum + g.tabs.reduce((s, t) => s + t.panes.length, 0),
+        0,
+      ) ?? 0;
     return (
       <DeleteSessionView
         sessionName={pendingDeleteSession}
@@ -285,9 +294,8 @@ export const ManagerView: FC<Props> = ({
           borderColor={focus === FOCUS.left ? "green" : "gray"}
         >
           <SessionListPanel
-            sessionGroups={fetchState.data}
+            sessions={sessionsState.sessions}
             currentSession={currentSession}
-            sessionPathMap={sessionPathMap}
             isFocused={focus === FOCUS.left}
             availableRows={panelHeight}
             onSelect={handleSessionSelect}

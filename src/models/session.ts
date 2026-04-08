@@ -57,3 +57,9 @@ export type SessionGroup = {
   sessionName: string;
   tabs: TabGroup[];
 };
+
+export type ManagedSession = {
+  name: string;
+  path: string;
+  groups: SessionGroup[];
+};

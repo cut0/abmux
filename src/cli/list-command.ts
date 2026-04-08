@@ -14,8 +14,9 @@ export const createListCommand =
       return;
     }
 
-    for (const group of result.sessionGroups) {
+    const lines = result.sessionGroups.map((group) => {
       const paneCount = group.tabs.reduce((sum, t) => sum + t.panes.length, 0);
-      console.log(`${group.sessionName} (${String(paneCount)} panes)`);
-    }
+      return `${group.sessionName} (${String(paneCount)} panes)`;
+    });
+    console.log(lines.join("\n"));
   };
