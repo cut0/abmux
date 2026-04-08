@@ -20,7 +20,7 @@ export type ManagerActions = {
   killPane: (paneId: string) => Promise<void>;
   highlightWindow: (up: UnifiedPane) => Promise<void>;
   unhighlightWindow: (up: UnifiedPane) => Promise<void>;
-  openEditor: (sessionName: string) => string | undefined;
+  openEditor: (sessionName: string, cwd: string) => string | undefined;
   navigateToPane: (up: UnifiedPane) => Promise<void>;
 };
 
@@ -48,10 +48,10 @@ type SessionsState = {
 type Props = {
   actions: ManagerActions;
   currentSession: string;
-  currentCwd: string;
   directories: string[];
   restoredPrompt?: string;
   restoredSession?: string;
+  restoredCwd?: string;
 };
 
 const POLL_INTERVAL = 3000;
@@ -59,10 +59,10 @@ const POLL_INTERVAL = 3000;
 export const ManagerView: FC<Props> = ({
   actions,
   currentSession,
-  currentCwd,
   directories,
   restoredPrompt,
   restoredSession,
+  restoredCwd,
 }) => {
   const { rows, columns } = useTerminalSize();
   const [sessionsState, setSessionsState] = useState<SessionsState>({
@@ -169,18 +169,21 @@ export const ManagerView: FC<Props> = ({
 
   const handleNewSession = useCallback(
     (sessionName: string): void => {
-      actions.openEditor(sessionName);
+      const cwd = selectedManagedSession?.path;
+      if (!cwd) return;
+      actions.openEditor(sessionName, cwd);
     },
-    [actions],
+    [actions, selectedManagedSession],
   );
 
   const handleConfirmNew = useCallback((): void => {
     if (!resolvedSession) return;
-    const cwd = selectedManagedSession?.path || currentCwd;
+    const cwd = restoredCwd ?? selectedManagedSession?.path;
+    if (!cwd) return;
     void actions.createSession(resolvedSession, cwd, pendingPrompt).then(() => void refresh());
     setPendingPrompt("");
     setMode(MODE.split);
-  }, [resolvedSession, selectedManagedSession, currentCwd, pendingPrompt, actions, refresh]);
+  }, [resolvedSession, restoredCwd, selectedManagedSession, pendingPrompt, actions, refresh]);
 
   const handleCancelConfirm = useCallback((): void => {
     setPendingPrompt("");

@@ -22,6 +22,7 @@ export const createTuiCommand =
     let instance: ReturnType<typeof render>;
     let pendingPrompt: string | undefined;
     let pendingSession: string | undefined;
+    let pendingCwd: string | undefined;
 
     const actions: ManagerActions = {
       fetchSessions: async (): Promise<ManagedSession[]> => {
@@ -76,11 +77,12 @@ export const createTuiCommand =
       unhighlightWindow: async (up: UnifiedPane): Promise<void> => {
         await usecases.manager.unhighlightWindow(up);
       },
-      openEditor: (sessionName: string): string | undefined => {
+      openEditor: (sessionName: string, cwd: string): string | undefined => {
         instance.unmount();
         const prompt = infra.editor.open();
         pendingPrompt = prompt;
         pendingSession = sessionName;
+        pendingCwd = cwd;
         instance = renderApp();
         return prompt;
       },
@@ -97,18 +99,20 @@ export const createTuiCommand =
     const renderApp = (): ReturnType<typeof render> => {
       const prompt = pendingPrompt;
       const session = pendingSession;
+      const cwd = pendingCwd;
       pendingPrompt = undefined;
       pendingSession = undefined;
+      pendingCwd = undefined;
       const rawCwd = process.cwd();
-      const currentCwd = findMatchingDirectory(rawCwd, directories) ?? rawCwd;
+      const currentSession = basename(findMatchingDirectory(rawCwd, directories) ?? rawCwd);
       return render(
         createElement(ManagerView, {
           actions,
-          currentSession: basename(currentCwd),
-          currentCwd,
+          currentSession,
           directories,
           restoredPrompt: prompt,
           restoredSession: session,
+          restoredCwd: cwd,
         }),
         { concurrent: true },
       );
