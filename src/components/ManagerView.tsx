@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { Box } from "ink";
+import { Box, useInput } from "ink";
 import { useCallback, useMemo, useRef, useState, type FC } from "react";
 
 import type { SessionSummaryResult } from "../models/claude-session.ts";
@@ -63,6 +63,7 @@ type Props = {
   restoredPrompt?: string;
   restoredSession?: string;
   restoredCwd?: string;
+  restoredOverview?: SessionSummaryResult;
 };
 
 const POLL_INTERVAL = 3000;
@@ -75,6 +76,7 @@ export const ManagerView: FC<Props> = ({
   restoredPrompt,
   restoredSession,
   restoredCwd,
+  restoredOverview,
 }) => {
   const { rows, columns } = useTerminalSize();
   const [sessionsState, setSessionsState] = useState<SessionsState>({
@@ -86,11 +88,10 @@ export const ManagerView: FC<Props> = ({
   const [selectedSession, setSelectedSession] = useState<string | undefined>(restoredSession);
   const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
   const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
-  const [overviewResult, setOverviewResult] = useState<SessionSummaryResult>({
-    overallSummary: "",
-    sessions: [],
-  });
-  const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewResult, setOverviewResult] = useState<SessionSummaryResult>(
+    restoredOverview ?? { overallSummary: "", sessions: [] },
+  );
+  const [overviewLoading, setOverviewLoading] = useState(!restoredOverview);
   const overviewInFlightRef = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
@@ -114,7 +115,6 @@ export const ManagerView: FC<Props> = ({
     () => {
       if (overviewInFlightRef.current) return;
       overviewInFlightRef.current = true;
-      setOverviewLoading(true);
       void actions
         .fetchOverview(sessionsState.sessions)
         .then((result) => {
@@ -130,6 +130,19 @@ export const ManagerView: FC<Props> = ({
     },
     OVERVIEW_POLL_INTERVAL,
     !sessionsState.isLoading,
+  );
+
+  useInput(
+    (_input, key) => {
+      if (key.tab) {
+        setFocus((prev) => {
+          if (prev === FOCUS.left) return FOCUS.right;
+          if (prev === FOCUS.right) return FOCUS.bottom;
+          return FOCUS.left;
+        });
+      }
+    },
+    { isActive: mode === MODE.split },
   );
 
   const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
@@ -396,10 +409,10 @@ export const ManagerView: FC<Props> = ({
       <StatusBar
         message={
           focus === FOCUS.left
-            ? "\u2191/\u2193 move  Enter/\u2192 select  n add  d delete  q quit"
+            ? "\u2191/\u2193 move  Enter/\u2192 select  Tab next  n add  d delete  q quit"
             : focus === FOCUS.right
-              ? "\u2191/\u2193 move  Enter focus  n new  d kill  Esc/\u2190 back  q quit"
-              : "\u2191/\u2193 scroll  Esc/\u2190 back  q quit"
+              ? "\u2191/\u2193 move  Enter focus  Tab next  n new  d kill  Esc/\u2190 back  q quit"
+              : "\u2191/\u2193 scroll  Tab next  Esc/\u2190 back  q quit"
         }
         statusCounts={statusCounts}
       />
