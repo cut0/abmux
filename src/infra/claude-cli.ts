@@ -1,8 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
-import {
-  SESSION_SUMMARY_SCHEMA,
-  type SessionSummaryResult,
-} from "../models/claude-session.ts";
+import { SESSION_SUMMARY_SCHEMA, type SessionSummaryResult } from "../models/claude-session.ts";
 
 export type ClaudeCli = {
   querySessionSummary: (prompt: string) => Promise<SessionSummaryResult>;

@@ -105,23 +105,27 @@ export const ManagerView: FC<Props> = ({
 
   useInterval(() => void refresh(), POLL_INTERVAL);
 
-  useInterval(() => {
-    if (overviewInFlightRef.current) return;
-    overviewInFlightRef.current = true;
-    setOverviewLoading(true);
-    void actions
-      .fetchOverview(sessionsState.sessions)
-      .then((result) => {
-        setOverviewResult(result);
-      })
-      .catch(() => {
-        // keep previous items
-      })
-      .finally(() => {
-        setOverviewLoading(false);
-        overviewInFlightRef.current = false;
-      });
-  }, OVERVIEW_POLL_INTERVAL, !sessionsState.isLoading);
+  useInterval(
+    () => {
+      if (overviewInFlightRef.current) return;
+      overviewInFlightRef.current = true;
+      setOverviewLoading(true);
+      void actions
+        .fetchOverview(sessionsState.sessions)
+        .then((result) => {
+          setOverviewResult(result);
+        })
+        .catch(() => {
+          // keep previous items
+        })
+        .finally(() => {
+          setOverviewLoading(false);
+          overviewInFlightRef.current = false;
+        });
+    },
+    OVERVIEW_POLL_INTERVAL,
+    !sessionsState.isLoading,
+  );
 
   const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
 

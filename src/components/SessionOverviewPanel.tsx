@@ -158,10 +158,7 @@ export const SessionOverviewPanel: FC<Props> = ({
             if (line.type === "summary") {
               return (
                 <Box key={line.key} paddingLeft={1}>
-                  <Text
-                    color={isHighlighted ? "green" : undefined}
-                    wrap="wrap"
-                  >
+                  <Text color={isHighlighted ? "green" : undefined} wrap="wrap">
                     {line.text}
                   </Text>
                 </Box>
@@ -170,9 +167,7 @@ export const SessionOverviewPanel: FC<Props> = ({
             if (line.type === "session") {
               return (
                 <Box key={line.key} paddingLeft={1}>
-                  <Text color={isHighlighted ? "green" : "cyan"}>
-                    {line.sessionName}
-                  </Text>
+                  <Text color={isHighlighted ? "green" : "cyan"}>{line.sessionName}</Text>
                 </Box>
               );
             }
