@@ -14,6 +14,8 @@ type Props = {
   onBack: () => void;
   onNewSession: (sessionName: string) => void;
   onKillPane: (paneId: string) => Promise<void>;
+  initialCursor?: number;
+  cursorRef?: { current: number };
 };
 
 export const PaneListPanel: FC<Props> = ({
@@ -27,6 +29,8 @@ export const PaneListPanel: FC<Props> = ({
   onBack,
   onNewSession,
   onKillPane,
+  initialCursor,
+  cursorRef,
 }) => {
   if (!selectedSession) {
     return (
@@ -49,6 +53,8 @@ export const PaneListPanel: FC<Props> = ({
       onBack={onBack}
       onNewSession={onNewSession}
       onKillPane={onKillPane}
+      initialCursor={initialCursor}
+      cursorRef={cursorRef}
     />
   );
 };
