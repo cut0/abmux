@@ -1,5 +1,11 @@
 # abmux
 
+## 0.0.7
+
+### Patch Changes
+
+- [#13](https://github.com/cut0/abmux/pull/13) [`af8d198`](https://github.com/cut0/abmux/commit/af8d198ee62e3630ad4f6ed9e778e8c259fec266) Thanks [@cut0](https://github.com/cut0)! - fix: Overview パネルの画面ちらつきを修正
+
 ## 0.0.6
 
 ### Patch Changes
