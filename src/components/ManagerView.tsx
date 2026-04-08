@@ -51,6 +51,17 @@ const FOCUS = {
 
 type Focus = (typeof FOCUS)[keyof typeof FOCUS];
 
+export type UISnapshot = {
+  focus: Focus;
+  selectedSession: string | undefined;
+  sessionListCursor: number;
+  paneListCursor: number;
+  overviewCursor: number;
+  overviewResult: SessionSummaryResult;
+};
+
+export type UISnapshotRef = { current: UISnapshot | undefined };
+
 type SessionsState = {
   sessions: ManagedSession[];
   isLoading: boolean;
@@ -63,7 +74,8 @@ type Props = {
   restoredPrompt?: string;
   restoredSession?: string;
   restoredCwd?: string;
-  restoredOverview?: SessionSummaryResult;
+  snapshotRef: UISnapshotRef;
+  restoredState?: UISnapshot;
 };
 
 const POLL_INTERVAL = 3000;
@@ -76,7 +88,8 @@ export const ManagerView: FC<Props> = ({
   restoredPrompt,
   restoredSession,
   restoredCwd,
-  restoredOverview,
+  snapshotRef,
+  restoredState,
 }) => {
   const { rows, columns } = useTerminalSize();
   const [sessionsState, setSessionsState] = useState<SessionsState>({
@@ -84,15 +97,24 @@ export const ManagerView: FC<Props> = ({
     isLoading: true,
   });
   const [mode, setMode] = useState<Mode>(restoredPrompt ? MODE.confirm : MODE.split);
-  const [focus, setFocus] = useState<Focus>(FOCUS.left);
-  const [selectedSession, setSelectedSession] = useState<string | undefined>(restoredSession);
+  const [focus, setFocus] = useState<Focus>(restoredState?.focus ?? FOCUS.left);
+  const [selectedSession, setSelectedSession] = useState<string | undefined>(
+    restoredSession ?? restoredState?.selectedSession,
+  );
   const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
   const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
   const [overviewResult, setOverviewResult] = useState<SessionSummaryResult>(
-    restoredOverview ?? { overallSummary: "", sessions: [] },
+    restoredState?.overviewResult ?? { overallSummary: "", sessions: [] },
   );
-  const [overviewLoading, setOverviewLoading] = useState(!restoredOverview);
+  const [overviewLoading, setOverviewLoading] = useState(
+    restoredState?.overviewResult ? false : true,
+  );
   const overviewInFlightRef = useRef(false);
+
+  const sessionCursorRef = useRef(restoredState?.sessionListCursor ?? 0);
+  const paneCursorRef = useRef(restoredState?.paneListCursor ?? 0);
+  const overviewCursorRef = useRef(restoredState?.overviewCursor ?? 0);
+  const paneRestoredRef = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
@@ -146,6 +168,21 @@ export const ManagerView: FC<Props> = ({
   );
 
   const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
+
+  const paneInitialCursor =
+    !paneRestoredRef.current && restoredState?.selectedSession === resolvedSession
+      ? restoredState?.paneListCursor
+      : undefined;
+  if (paneInitialCursor !== undefined) paneRestoredRef.current = true;
+
+  snapshotRef.current = {
+    focus,
+    selectedSession: resolvedSession,
+    sessionListCursor: sessionCursorRef.current,
+    paneListCursor: paneCursorRef.current,
+    overviewCursor: overviewCursorRef.current,
+    overviewResult,
+  };
 
   const selectedManagedSession = useMemo(
     () => sessionsState.sessions.find((s) => s.name === resolvedSession),
@@ -375,6 +412,8 @@ export const ManagerView: FC<Props> = ({
             onCursorChange={handleSessionCursorChange}
             onDeleteSession={handleDeleteSession}
             onAddSession={handleOpenAddSession}
+            initialCursor={restoredState?.sessionListCursor}
+            cursorRef={sessionCursorRef}
           />
         </Box>
         <Box
@@ -394,6 +433,8 @@ export const ManagerView: FC<Props> = ({
             onBack={handleBack}
             onNewSession={handleNewSession}
             onKillPane={handleKillPane}
+            initialCursor={paneInitialCursor}
+            cursorRef={paneCursorRef}
           />
         </Box>
       </Box>
@@ -405,6 +446,8 @@ export const ManagerView: FC<Props> = ({
         isFocused={focus === FOCUS.bottom}
         availableRows={bottomHeight}
         onBack={handleBack}
+        initialCursor={restoredState?.overviewCursor}
+        cursorRef={overviewCursorRef}
       />
       <StatusBar
         message={

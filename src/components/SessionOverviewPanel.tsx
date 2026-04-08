@@ -14,6 +14,8 @@ type Props = {
   isFocused: boolean;
   availableRows: number;
   onBack: () => void;
+  initialCursor?: number;
+  cursorRef?: { current: number };
 };
 
 type OverviewLine = {
@@ -34,9 +36,11 @@ export const SessionOverviewPanel: FC<Props> = ({
   isFocused,
   availableRows,
   onBack,
+  initialCursor,
+  cursorRef,
 }) => {
   const { exit } = useApp();
-  const [cursor, setCursor] = useState(0);
+  const [cursor, setCursor] = useState(initialCursor ?? 0);
 
   const lines = useMemo((): OverviewLine[] => {
     const summaryLines: OverviewLine[] = overallSummary
@@ -83,6 +87,7 @@ export const SessionOverviewPanel: FC<Props> = ({
   }, [overallSummary, items, groups]);
 
   const clampedCursor = cursor >= lines.length ? Math.max(0, lines.length - 1) : cursor;
+  if (cursorRef) cursorRef.current = clampedCursor;
 
   const reservedLines = 3; // border top(1) + header(1) + border bottom(1)
   const { scrollOffset, visibleCount } = useScroll(

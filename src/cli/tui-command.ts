@@ -1,7 +1,12 @@
 import { basename } from "node:path";
 import { render } from "ink";
 import { createElement } from "react";
-import { ManagerView, type ManagerActions } from "../components/ManagerView.tsx";
+import {
+  ManagerView,
+  type ManagerActions,
+  type UISnapshot,
+  type UISnapshotRef,
+} from "../components/ManagerView.tsx";
 import type { SessionSummaryResult } from "../models/claude-session.ts";
 import type { Infra } from "../infra/index.ts";
 import type { Services } from "../services/index.ts";
@@ -24,7 +29,8 @@ export const createTuiCommand =
     let pendingPrompt: string | undefined;
     let pendingSession: string | undefined;
     let pendingCwd: string | undefined;
-    let lastOverviewResult: SessionSummaryResult | undefined;
+    const snapshotRef: UISnapshotRef = { current: undefined };
+    let restoredState: UISnapshot | undefined;
 
     const actions: ManagerActions = {
       fetchSessions: async (): Promise<ManagedSession[]> => {
@@ -57,9 +63,7 @@ export const createTuiCommand =
       },
       fetchOverview: async (sessions: ManagedSession[]): Promise<SessionSummaryResult> => {
         const groups: SessionGroup[] = sessions.flatMap((s) => s.groups);
-        const result = await usecases.manager.fetchOverview(groups);
-        lastOverviewResult = result;
-        return result;
+        return await usecases.manager.fetchOverview(groups);
       },
       createSession: async (
         sessionName: string,
@@ -82,6 +86,7 @@ export const createTuiCommand =
         await usecases.manager.unhighlightWindow(up);
       },
       openEditor: (sessionName: string, cwd: string): string | undefined => {
+        restoredState = snapshotRef.current;
         instance.unmount();
         const prompt = infra.editor.open();
         pendingPrompt = prompt;
@@ -94,6 +99,7 @@ export const createTuiCommand =
         const target = `${up.pane.sessionName}:${String(up.pane.windowIndex)}`;
         await infra.tmuxCli.selectWindow(target);
         await infra.tmuxCli.selectPane(up.pane.paneId);
+        restoredState = snapshotRef.current;
         instance.unmount();
         await infra.tmuxCli.attachSession(up.pane.sessionName);
         instance = renderApp();
@@ -104,9 +110,12 @@ export const createTuiCommand =
       const prompt = pendingPrompt;
       const session = pendingSession;
       const cwd = pendingCwd;
+      const snapshot = restoredState;
       pendingPrompt = undefined;
       pendingSession = undefined;
       pendingCwd = undefined;
+      restoredState = undefined;
+      snapshotRef.current = undefined;
       const rawCwd = process.cwd();
       const currentSession = basename(findMatchingDirectory(rawCwd, directories) ?? rawCwd);
       return render(
@@ -117,7 +126,8 @@ export const createTuiCommand =
           restoredPrompt: prompt,
           restoredSession: session,
           restoredCwd: cwd,
-          restoredOverview: lastOverviewResult,
+          snapshotRef,
+          restoredState: snapshot,
         }),
         { concurrent: true },
       );
