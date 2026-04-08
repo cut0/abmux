@@ -4,7 +4,7 @@ import { createElement } from "react";
 import {
   ManagerView,
   type ManagerActions,
-  type UISnapshot,
+  type RemountState,
   type UISnapshotRef,
 } from "../components/ManagerView.tsx";
 import type { SessionSummaryResult } from "../models/claude-session.ts";
@@ -26,11 +26,8 @@ export const createTuiCommand =
     const directories = await services.directoryScan.scan();
 
     let instance: ReturnType<typeof render>;
-    let pendingPrompt: string | undefined;
-    let pendingSession: string | undefined;
-    let pendingCwd: string | undefined;
     const snapshotRef: UISnapshotRef = { current: undefined };
-    let restoredState: UISnapshot | undefined;
+    let remountState: RemountState | undefined;
 
     const actions: ManagerActions = {
       fetchSessions: async (): Promise<ManagedSession[]> => {
@@ -86,12 +83,10 @@ export const createTuiCommand =
         await usecases.manager.unhighlightWindow(up);
       },
       openEditor: (sessionName: string, cwd: string): string | undefined => {
-        restoredState = snapshotRef.current;
+        const snapshot = snapshotRef.current;
         instance.unmount();
         const prompt = infra.editor.open();
-        pendingPrompt = prompt;
-        pendingSession = sessionName;
-        pendingCwd = cwd;
+        remountState = { prompt, session: sessionName, cwd, snapshot };
         instance = renderApp();
         return prompt;
       },
@@ -99,22 +94,17 @@ export const createTuiCommand =
         const target = `${up.pane.sessionName}:${String(up.pane.windowIndex)}`;
         await infra.tmuxCli.selectWindow(target);
         await infra.tmuxCli.selectPane(up.pane.paneId);
-        restoredState = snapshotRef.current;
+        const snapshot = snapshotRef.current;
         instance.unmount();
         await infra.tmuxCli.attachSession(up.pane.sessionName);
+        remountState = { snapshot };
         instance = renderApp();
       },
     };
 
     const renderApp = (): ReturnType<typeof render> => {
-      const prompt = pendingPrompt;
-      const session = pendingSession;
-      const cwd = pendingCwd;
-      const snapshot = restoredState;
-      pendingPrompt = undefined;
-      pendingSession = undefined;
-      pendingCwd = undefined;
-      restoredState = undefined;
+      const state = remountState;
+      remountState = undefined;
       snapshotRef.current = undefined;
       const rawCwd = process.cwd();
       const currentSession = basename(findMatchingDirectory(rawCwd, directories) ?? rawCwd);
@@ -123,11 +113,8 @@ export const createTuiCommand =
           actions,
           currentSession,
           directories,
-          restoredPrompt: prompt,
-          restoredSession: session,
-          restoredCwd: cwd,
+          remountState: state,
           snapshotRef,
-          restoredState: snapshot,
         }),
         { concurrent: true },
       );

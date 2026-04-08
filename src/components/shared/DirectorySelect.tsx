@@ -13,7 +13,6 @@ type Props = {
   onCursorChange: (name: string) => void;
   onDeleteSession?: (name: string) => void;
   onAddSession?: () => void;
-  initialCursor?: number;
   cursorRef?: { current: number };
 };
 
@@ -35,11 +34,10 @@ export const SessionListPanel: FC<Props> = ({
   onCursorChange,
   onDeleteSession,
   onAddSession,
-  initialCursor,
   cursorRef,
 }) => {
   const { exit } = useApp();
-  const [cursor, setCursor] = useState(initialCursor ?? 0);
+  const [cursor, setCursor] = useState(cursorRef?.current ?? 0);
 
   const sortedSessions = useMemo(
     () => sortSessions(sessions, currentSession),

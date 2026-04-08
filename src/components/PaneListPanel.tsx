@@ -1,5 +1,5 @@
 import { Box, Text } from "ink";
-import type { FC } from "react";
+import { useRef, type FC } from "react";
 import type { SessionGroup, UnifiedPane } from "../models/session.ts";
 import { PaneListView } from "./PaneListView.tsx";
 
@@ -15,7 +15,6 @@ type Props = {
   onNewSession: (sessionName: string) => void;
   onOpenEditor: (sessionName: string) => void;
   onKillPane: (paneId: string) => Promise<void>;
-  initialCursor?: number;
   cursorRef?: { current: number };
 };
 
@@ -31,9 +30,14 @@ export const PaneListPanel: FC<Props> = ({
   onNewSession,
   onOpenEditor,
   onKillPane,
-  initialCursor,
   cursorRef,
 }) => {
+  const prevSessionRef = useRef(selectedSession);
+  if (prevSessionRef.current !== selectedSession) {
+    prevSessionRef.current = selectedSession;
+    if (cursorRef) cursorRef.current = 0;
+  }
+
   if (!selectedSession) {
     return (
       <Box paddingLeft={1}>
@@ -56,7 +60,6 @@ export const PaneListPanel: FC<Props> = ({
       onNewSession={onNewSession}
       onOpenEditor={onOpenEditor}
       onKillPane={onKillPane}
-      initialCursor={initialCursor}
       cursorRef={cursorRef}
     />
   );
