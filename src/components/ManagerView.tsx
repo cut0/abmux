@@ -1,6 +1,6 @@
 import { basename } from "node:path";
 import { Box, Text } from "ink";
-import { useCallback, useEffect, useMemo, useRef, useState, type FC } from "react";
+import { useCallback, useEffect, useMemo, useState, type FC } from "react";
 import type { SessionGroup, UnifiedPane } from "../models/session.ts";
 import { Header } from "./shared/Header.tsx";
 import { StatusBar } from "./shared/StatusBar.tsx";
@@ -21,7 +21,7 @@ export type ManagerActions = {
   highlightWindow: (up: UnifiedPane) => Promise<void>;
   unhighlightWindow: (up: UnifiedPane) => Promise<void>;
   openEditor: (sessionName: string) => string | undefined;
-  attachSession: (sessionName: string) => void;
+  navigateToPane: (up: UnifiedPane) => Promise<void>;
 };
 
 const MODE = {
@@ -50,6 +50,7 @@ type Props = {
   currentSession: string;
   currentCwd: string;
   directories: string[];
+  sessionCwdMap: Map<string, string>;
   restoredPrompt?: string;
   restoredSession?: string;
 };
@@ -61,6 +62,7 @@ export const ManagerView: FC<Props> = ({
   currentSession,
   currentCwd,
   directories,
+  sessionCwdMap,
   restoredPrompt,
   restoredSession,
 }) => {
@@ -71,14 +73,13 @@ export const ManagerView: FC<Props> = ({
   const [selectedSession, setSelectedSession] = useState<string | undefined>(restoredSession);
   const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
   const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
-  const sessionCwdMap = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
       const groups = await actions.fetchSessions();
       const knownNames = new Set(groups.map((g) => g.sessionName));
       const missing: SessionGroup[] = [];
-      for (const name of sessionCwdMap.current.keys()) {
+      for (const name of sessionCwdMap.keys()) {
         if (!knownNames.has(name)) {
           missing.push({ sessionName: name, tabs: [] });
         }
@@ -113,7 +114,7 @@ export const ManagerView: FC<Props> = ({
   const handleAddSessionSelect = useCallback(
     (path: string): void => {
       const name = basename(path);
-      sessionCwdMap.current.set(name, path);
+      sessionCwdMap.set(name, path);
       const exists = fetchState.data.some((g) => g.sessionName === name);
       if (!exists) {
         setFetchState((prev) => ({
@@ -138,7 +139,7 @@ export const ManagerView: FC<Props> = ({
 
   const handleConfirmDelete = useCallback((): void => {
     if (!pendingDeleteSession) return;
-    sessionCwdMap.current.delete(pendingDeleteSession);
+    sessionCwdMap.delete(pendingDeleteSession);
     if (resolvedSession === pendingDeleteSession) {
       setSelectedSession(undefined);
     }
@@ -161,11 +162,12 @@ export const ManagerView: FC<Props> = ({
 
   const handleConfirmNew = useCallback((): void => {
     if (!resolvedSession) return;
-    const cwd = sessionCwdMap.current.get(resolvedSession) ?? currentCwd;
+    const existingCwd = selectedGroup?.tabs[0]?.panes[0]?.pane.cwd;
+    const cwd = sessionCwdMap.get(resolvedSession) ?? existingCwd ?? currentCwd;
     void actions.createSession(resolvedSession, cwd, pendingPrompt).then(() => void refresh());
     setPendingPrompt("");
     setMode(MODE.split);
-  }, [resolvedSession, currentCwd, pendingPrompt, actions, refresh]);
+  }, [resolvedSession, selectedGroup, currentCwd, pendingPrompt, actions, refresh]);
 
   const handleCancelConfirm = useCallback((): void => {
     setPendingPrompt("");
@@ -183,7 +185,7 @@ export const ManagerView: FC<Props> = ({
 
   const handleNavigate = useCallback(
     (up: UnifiedPane): void => {
-      actions.attachSession(up.pane.sessionName);
+      void actions.navigateToPane(up);
     },
     [actions],
   );
