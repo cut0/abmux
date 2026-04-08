@@ -82,6 +82,7 @@ export const createTuiCommand =
           restoredPrompt: prompt,
           restoredSession: session,
         }),
+        { concurrent: true },
       );
     };
 
