@@ -1,5 +1,11 @@
 # abmux
 
+## 0.0.10
+
+### Patch Changes
+
+- [#24](https://github.com/cut0/abmux/pull/24) [`e5f6b0b`](https://github.com/cut0/abmux/commit/e5f6b0b2b90c82bcfd9b04f1ac5d44ae6c81ebf4) Thanks [@cut0](https://github.com/cut0)! - docs: remove pnpm from requirements, add multiple install options
+
 ## 0.0.9
 
 ### Patch Changes
