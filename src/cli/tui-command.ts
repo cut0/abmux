@@ -58,8 +58,13 @@ export const createTuiCommand =
         const groups: SessionGroup[] = sessions.flatMap((s) => s.groups);
         return await usecases.manager.fetchOverview(groups);
       },
-      createSession: async (sessionName: string, cwd: string, prompt: string): Promise<void> => {
-        await usecases.manager.createSession({ sessionName, cwd, prompt });
+      createSession: async (
+        sessionName: string,
+        cwd: string,
+        prompt: string,
+        worktree: boolean,
+      ): Promise<void> => {
+        await usecases.manager.createSession({ sessionName, cwd, prompt, worktree });
       },
       killSession: async (sessionName: string): Promise<void> => {
         await usecases.manager.killSession(sessionName);
