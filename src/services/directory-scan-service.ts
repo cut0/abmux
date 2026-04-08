@@ -40,27 +40,16 @@ const findProjects = async (dir: string, depth: number): Promise<string[]> => {
       (e) => e.isDirectory() && !e.name.startsWith(".") && !SKIP_DIRS.has(e.name),
     );
 
-    const results: string[] = [];
-    const childScans: Promise<string[]>[] = [];
-
-    for (const entry of dirs) {
+    const childScans = dirs.map((entry) => {
       const fullPath = join(dir, entry.name);
-      childScans.push(
-        exists(join(fullPath, ".git")).then(async (isProject) => {
-          if (isProject) return [fullPath];
-          return await findProjects(fullPath, depth + 1);
-        }),
-      );
-    }
+      return exists(join(fullPath, ".git")).then(async (isProject) => {
+        if (isProject) return [fullPath];
+        return await findProjects(fullPath, depth + 1);
+      });
+    });
 
     const nested = await Promise.all(childScans);
-    for (const paths of nested) {
-      for (const p of paths) {
-        results.push(p);
-      }
-    }
-
-    return results;
+    return nested.flat();
   } catch {
     return [];
   }

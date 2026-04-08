@@ -46,21 +46,12 @@ export const createTuiCommand =
             return { path, group: enrichedGroup };
           }),
         );
-        const byPath = new Map<string, ManagedSession>();
-        for (const item of resolved) {
-          const key = item.path || item.group.sessionName;
-          const existing = byPath.get(key);
-          if (existing) {
-            byPath.set(key, { ...existing, groups: [...existing.groups, item.group] });
-          } else {
-            byPath.set(key, {
-              name: basename(item.path) || item.group.sessionName,
-              path: item.path,
-              groups: [item.group],
-            });
-          }
-        }
-        return [...byPath.values()];
+        const grouped = Map.groupBy(resolved, (item) => item.path || item.group.sessionName);
+        return [...grouped.entries()].map(([key, items]) => ({
+          name: basename(key) || items[0].group.sessionName,
+          path: items[0].path,
+          groups: items.map((item) => item.group),
+        }));
       },
       createSession: async (sessionName: string, cwd: string, prompt: string): Promise<void> => {
         await usecases.manager.createSession({ sessionName, cwd, prompt });
