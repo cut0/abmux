@@ -205,10 +205,7 @@ export const ManagerView: FC<Props> = ({
     };
   }, [selectedManagedSession]);
 
-  const allGroups = useMemo(
-    () => state.sessions.flatMap((s) => s.groups),
-    [state.sessions],
-  );
+  const allGroups = useMemo(() => state.sessions.flatMap((s) => s.groups), [state.sessions]);
 
   const statusCounts = useMemo(
     (): Partial<Record<SessionStatus, number>> =>
@@ -229,21 +226,18 @@ export const ManagerView: FC<Props> = ({
     patch({ view: { mode: "addSession" } });
   }, [patch]);
 
-  const handleAddSessionSelect = useCallback(
-    (path: string): void => {
-      const name = basename(path);
-      setState((prev) => {
-        const exists = prev.sessions.some((s) => s.name === name);
-        return {
-          ...prev,
-          view: { mode: "split" },
-          selectedSession: name,
-          sessions: exists ? prev.sessions : [{ name, path, groups: [] }, ...prev.sessions],
-        };
-      });
-    },
-    [],
-  );
+  const handleAddSessionSelect = useCallback((path: string): void => {
+    const name = basename(path);
+    setState((prev) => {
+      const exists = prev.sessions.some((s) => s.name === name);
+      return {
+        ...prev,
+        view: { mode: "split" },
+        selectedSession: name,
+        sessions: exists ? prev.sessions : [{ name, path, groups: [] }, ...prev.sessions],
+      };
+    });
+  }, []);
 
   const handleCancelAddSession = useCallback((): void => {
     patch({ view: { mode: "split" } });
@@ -264,8 +258,7 @@ export const ManagerView: FC<Props> = ({
       ...prev,
       view: { mode: "split" },
       sessions: prev.sessions.filter((s) => s.name !== sessionName),
-      selectedSession:
-        prev.selectedSession === sessionName ? undefined : prev.selectedSession,
+      selectedSession: prev.selectedSession === sessionName ? undefined : prev.selectedSession,
     }));
     if (session) {
       const killAll = Promise.all(
