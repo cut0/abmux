@@ -44,16 +44,16 @@ The main screen is split into three panels:
 
 ```
 +-----------------------+---------------------------------------+
-| abmux - v0.0.x                                               |
+| abmux - v0.0.x                                                |
 +-----------------------+---------------------------------------+
 |                       |                                       |
 | Session List          | Pane List                             |
 | (Left Panel)          | (Right Panel)                         |
 |                       |                                       |
-| > my-project (cwd)    |   * [thinking] Refactoring...  %5    |
-|   other-project       |   * [running]  Fixing tests    %8    |
-|                       |   o [idle]     Waiting         %12   |
-|                       |   * vim                        %3    |
+| > my-project (cwd)    |   * [thinking] Refactoring...  %5     |
+|   other-project       |   * [running]  Fixing tests    %8     |
+|                       |   o [idle]     Waiting         %12    |
+|                       |   * vim                        %3     |
 |                       |                                       |
 +-----------------------+---------------------------------------+
 |                                                               |
@@ -61,7 +61,7 @@ The main screen is split into three panels:
 | Summaries of what Claude is working on in each session        |
 |                                                               |
 +---------------------------------------------------------------+
-| [keys] move / select / Tab / n / d / q        * 2 thinking   |
+| [keys] move / select / Tab / n / d / q       * 2 thinking     |
 +---------------------------------------------------------------+
 ```
 
