@@ -68,48 +68,48 @@ Press `Tab` to cycle focus: Left → Right → Bottom. The focused panel is high
 
 Lists tmux sessions grouped by project directory. The session matching your current directory is marked with `(cwd)`.
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Move cursor |
+| Key           | Action                              |
+| ------------- | ----------------------------------- |
+| `↑` / `↓`     | Move cursor                         |
 | `Enter` / `→` | Select session, move to right panel |
-| `n` | Add session via directory search |
-| `d` | Delete session |
-| `q` | Quit |
+| `n`           | Add session via directory search    |
+| `d`           | Delete session                      |
+| `q`           | Quit                                |
 
 ### Right Panel: Pane List
 
 Shows all panes in the selected session. Claude Code panes display their status; other panes (editors, shells) are also listed.
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Move cursor |
-| `Enter` | Attach to pane (switch to tmux) |
-| `n` | Create a new Claude session |
-| `v` | Open session in `$EDITOR` |
-| `d` | Kill pane |
-| `Esc` / `←` | Back to left panel |
+| Key         | Action                          |
+| ----------- | ------------------------------- |
+| `↑` / `↓`   | Move cursor                     |
+| `Enter`     | Attach to pane (switch to tmux) |
+| `n`         | Create a new Claude session     |
+| `v`         | Open session in `$EDITOR`       |
+| `d`         | Kill pane                       |
+| `Esc` / `←` | Back to left panel              |
 
 ### Bottom Panel: Session Overview
 
 Displays AI-generated summaries of what Claude is doing in each session. Auto-refreshes every 60 seconds.
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Scroll |
-| `Tab` | Next panel |
+| Key         | Action             |
+| ----------- | ------------------ |
+| `↑` / `↓`   | Scroll             |
+| `Tab`       | Next panel         |
 | `Esc` / `←` | Back to left panel |
 
 ## Status Icons
 
 The right panel and the status bar show Claude session states with these icons:
 
-| Icon | Status | Meaning |
-|------|--------|---------|
-| `⠋` (braille) | thinking | Claude is reasoning |
-| `✳` | running | Executing a tool |
-| `❓` | confirm | Waiting for user approval |
-| `❯` | waiting | Ready for input |
-| `○` | idle | Idle |
+| Icon          | Status   | Meaning                   |
+| ------------- | -------- | ------------------------- |
+| `⠋` (braille) | thinking | Claude is reasoning       |
+| `✳`           | running  | Executing a tool          |
+| `❓`          | confirm  | Waiting for user approval |
+| `❯`           | waiting  | Ready for input           |
+| `○`           | idle     | Idle                      |
 
 Non-Claude panes show `●` (busy) or `○` (available).
 
