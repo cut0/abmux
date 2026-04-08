@@ -5,7 +5,8 @@ import { ManagerView, type ManagerActions } from "../components/ManagerView.tsx"
 import type { Infra } from "../infra/index.ts";
 import type { Services } from "../services/index.ts";
 import type { Usecases } from "../usecases/index.ts";
-import type { SessionGroup, UnifiedPane } from "../models/session.ts";
+import type { ManagedSession, UnifiedPane } from "../models/session.ts";
+import { findMatchingDirectory } from "../utils/PathUtils.ts";
 
 type TuiCommandDeps = {
   usecases: Usecases;
@@ -17,26 +18,32 @@ export const createTuiCommand =
   ({ usecases, services, infra }: TuiCommandDeps) =>
   async (): Promise<void> => {
     const directories = await services.directoryScan.scan();
-    const sessionCwdMap = new Map<string, string>();
 
     let instance: ReturnType<typeof render>;
     let pendingPrompt: string | undefined;
     let pendingSession: string | undefined;
 
     const actions: ManagerActions = {
-      fetchSessions: async (): Promise<SessionGroup[]> => {
+      fetchSessions: async (): Promise<ManagedSession[]> => {
         const result = await usecases.manager.list();
         return await Promise.all(
-          result.sessionGroups.map(async (group) => ({
-            sessionName: group.sessionName,
-            tabs: await Promise.all(
-              group.tabs.map(async (tab) => ({
-                windowIndex: tab.windowIndex,
-                windowName: tab.windowName,
-                panes: await Promise.all(tab.panes.map((up) => usecases.manager.enrichStatus(up))),
-              })),
-            ),
-          })),
+          result.sessionGroups.map(async (group) => {
+            const enrichedGroup = {
+              sessionName: group.sessionName,
+              tabs: await Promise.all(
+                group.tabs.map(async (tab) => ({
+                  windowIndex: tab.windowIndex,
+                  windowName: tab.windowName,
+                  panes: await Promise.all(
+                    tab.panes.map((up) => usecases.manager.enrichStatus(up)),
+                  ),
+                })),
+              ),
+            };
+            const paneCwd = group.tabs[0]?.panes[0]?.pane.cwd ?? "";
+            const path = findMatchingDirectory(paneCwd, directories) ?? paneCwd;
+            return { name: group.sessionName, path, group: enrichedGroup };
+          }),
         );
       },
       createSession: async (sessionName: string, cwd: string, prompt: string): Promise<void> => {
@@ -77,13 +84,14 @@ export const createTuiCommand =
       const session = pendingSession;
       pendingPrompt = undefined;
       pendingSession = undefined;
+      const rawCwd = process.cwd();
+      const currentCwd = findMatchingDirectory(rawCwd, directories) ?? rawCwd;
       return render(
         createElement(ManagerView, {
           actions,
-          currentSession: basename(process.cwd()),
-          currentCwd: process.cwd(),
+          currentSession: basename(currentCwd),
+          currentCwd,
           directories,
-          sessionCwdMap,
           restoredPrompt: prompt,
           restoredSession: session,
         }),

@@ -1,13 +1,12 @@
 import { Box, Text, useApp, useInput } from "ink";
 import { useCallback, useMemo, useState, type FC } from "react";
-import type { SessionGroup } from "../../models/session.ts";
+import type { ManagedSession } from "../../models/session.ts";
 import { useScroll } from "../../hooks/use-scroll.ts";
 import { formatCwd } from "../../utils/PathUtils.ts";
 
 type Props = {
-  sessionGroups: SessionGroup[];
+  sessions: ManagedSession[];
   currentSession: string;
-  sessionPathMap: Map<string, string>;
   isFocused: boolean;
   availableRows: number;
   onSelect: (name: string) => void;
@@ -16,19 +15,18 @@ type Props = {
   onAddSession?: () => void;
 };
 
-export const sortSessionGroups = (
-  groups: SessionGroup[],
+export const sortSessions = (
+  sessions: ManagedSession[],
   currentSession: string,
-): SessionGroup[] => {
-  const current = groups.filter((g) => g.sessionName === currentSession);
-  const rest = groups.filter((g) => g.sessionName !== currentSession);
+): ManagedSession[] => {
+  const current = sessions.filter((s) => s.name === currentSession);
+  const rest = sessions.filter((s) => s.name !== currentSession);
   return [...current, ...rest];
 };
 
 export const SessionListPanel: FC<Props> = ({
-  sessionGroups,
+  sessions,
   currentSession,
-  sessionPathMap,
   isFocused,
   availableRows,
   onSelect,
@@ -39,14 +37,14 @@ export const SessionListPanel: FC<Props> = ({
   const { exit } = useApp();
   const [cursor, setCursor] = useState(0);
 
-  const sortedGroups = useMemo(
-    () => sortSessionGroups(sessionGroups, currentSession),
-    [sessionGroups, currentSession],
+  const sortedSessions = useMemo(
+    () => sortSessions(sessions, currentSession),
+    [sessions, currentSession],
   );
 
-  const sessions = useMemo(() => sortedGroups.map((g) => g.sessionName), [sortedGroups]);
+  const names = useMemo(() => sortedSessions.map((s) => s.name), [sortedSessions]);
 
-  const clampedCursor = cursor >= sessions.length ? Math.max(0, sessions.length - 1) : cursor;
+  const clampedCursor = cursor >= names.length ? Math.max(0, names.length - 1) : cursor;
   if (clampedCursor !== cursor) {
     setCursor(clampedCursor);
   }
@@ -54,19 +52,19 @@ export const SessionListPanel: FC<Props> = ({
   const reservedLines = 1;
   const { scrollOffset, visibleCount } = useScroll(
     clampedCursor,
-    sessions.length,
+    names.length,
     availableRows - reservedLines,
   );
-  const visibleSessions = sessions.slice(scrollOffset, scrollOffset + visibleCount);
+  const visibleSessions = sortedSessions.slice(scrollOffset, scrollOffset + visibleCount);
 
   const moveCursor = useCallback(
     (next: number): void => {
-      const clamped = Math.max(0, Math.min(sessions.length - 1, next));
+      const clamped = Math.max(0, Math.min(names.length - 1, next));
       setCursor(clamped);
-      const name = sessions[clamped];
+      const name = names[clamped];
       if (name) onCursorChange(name);
     },
-    [sessions, onCursorChange],
+    [names, onCursorChange],
   );
 
   useInput(
@@ -87,13 +85,13 @@ export const SessionListPanel: FC<Props> = ({
       }
 
       if (key.return || key.rightArrow) {
-        const name = sessions[clampedCursor];
+        const name = names[clampedCursor];
         if (name) onSelect(name);
         return;
       }
 
       if (input === "d" && onDeleteSession) {
-        const name = sessions[clampedCursor];
+        const name = names[clampedCursor];
         if (name) onDeleteSession(name);
         return;
       }
@@ -113,22 +111,21 @@ export const SessionListPanel: FC<Props> = ({
         </Text>
         <Text dimColor>
           {" "}
-          ({clampedCursor + 1}/{sessions.length})
+          ({clampedCursor + 1}/{names.length})
         </Text>
       </Box>
       <Box flexDirection="column" flexGrow={1} overflow="hidden">
-        {visibleSessions.map((name, i) => {
+        {visibleSessions.map((session, i) => {
           const globalIndex = scrollOffset + i;
           const isHighlighted = globalIndex === clampedCursor;
-          const isCurrent = name === currentSession;
-          const path = sessionPathMap.get(name);
+          const isCurrent = session.name === currentSession;
           return (
-            <Box key={name} paddingLeft={1} gap={1}>
+            <Box key={session.name} paddingLeft={1} gap={1}>
               <Text color={isHighlighted ? "green" : undefined}>
                 {isHighlighted ? "\u25B6" : " "}
               </Text>
               <Text color={isHighlighted ? "green" : "cyan"} bold={isHighlighted} wrap="truncate">
-                {path ? formatCwd(path) : name}
+                {session.path ? formatCwd(session.path) : session.name}
               </Text>
               {isCurrent && <Text color="yellow">(cwd)</Text>}
             </Box>
