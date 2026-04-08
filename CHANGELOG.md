@@ -1,5 +1,17 @@
 # abmux
 
+## 0.0.9
+
+### Patch Changes
+
+- [#19](https://github.com/cut0/abmux/pull/19) [`751a59e`](https://github.com/cut0/abmux/commit/751a59e324a171ceda4bdaa309a47481a23da8df) Thanks [@cut0](https://github.com/cut0)! - feat: n キーでインラインプロンプト入力、v キーで vim 起動に変更
+
+- [#20](https://github.com/cut0/abmux/pull/20) [`728c24c`](https://github.com/cut0/abmux/commit/728c24c66644d852e3c1d11608ff3a100fad4d8c) Thanks [@cut0](https://github.com/cut0)! - refactor: ManagerView のステート管理を統合
+
+- [#23](https://github.com/cut0/abmux/pull/23) [`3efe619`](https://github.com/cut0/abmux/commit/3efe619aa41e67e3520eaa94f4842267683267fd) Thanks [@cut0](https://github.com/cut0)! - docs: improve README with screen layout diagram and keybindings
+
+- [#21](https://github.com/cut0/abmux/pull/21) [`3f37c1d`](https://github.com/cut0/abmux/commit/3f37c1d6979b8e690458d99e33dc17ca0a8f4429) Thanks [@cut0](https://github.com/cut0)! - fix: ManagerView.tsx のフォーマットを修正
+
 ## 0.0.8
 
 ### Patch Changes
