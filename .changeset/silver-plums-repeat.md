@@ -1,5 +1,5 @@
 ---
-"@fake-scope/fake-pkg": patch
+"abmux": patch
 ---
 
 update: セッション一覧にパスを ~/path 形式で表示
