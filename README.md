@@ -43,26 +43,26 @@ abmux list                         # List sessions
 The main screen is split into three panels:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│ abmux - v0.0.x                                                  │
-├───────────────────────┬─────────────────────────────────────────┤
-│                       │                                         │
-│  Session List         │  Pane List                              │
-│  (Left Panel)         │  (Right Panel)                          │
-│                       │                                         │
-│  > my-project (cwd)   │    ⠋ [thinking] Refactoring...  %5     │
-│    other-project      │    ✳ [running]  Fixing tests    %8     │
-│                       │    ○ [idle]     Waiting         %12    │
-│                       │    ● vim                        %3     │
-│                       │                                         │
-├───────────────────────┴─────────────────────────────────────────┤
-│                                                                  │
-│  Session Overview (Bottom Panel)                                 │
-│  Summaries of what Claude is working on in each session          │
-│                                                                  │
-├──────────────────────────────────────────────────────────────────┤
-│ ↑/↓ move  Enter select  Tab next  n add  q quit    ● 2 thinking │
-└──────────────────────────────────────────────────────────────────┘
++-------------------------+---------------------------------------+
+| abmux - v0.0.x                                                   |
++-------------------------+---------------------------------------+
+|                         |                                       |
+|  Session List           |  Pane List                            |
+|  (Left Panel)           |  (Right Panel)                        |
+|                         |                                       |
+|  > my-project (cwd)     |    * [thinking] Refactoring...  %5   |
+|    other-project        |    * [running]  Fixing tests    %8   |
+|                         |    o [idle]     Waiting         %12  |
+|                         |    * vim                        %3   |
+|                         |                                       |
++-------------------------+---------------------------------------+
+|                                                                   |
+|  Session Overview (Bottom Panel)                                  |
+|  Summaries of what Claude is working on in each session           |
+|                                                                   |
++-------------------------------------------------------------------+
+| [keys]  move / select / Tab / n / d / q       * 2 thinking       |
++-------------------------------------------------------------------+
 ```
 
 Press `Tab` to cycle focus: Left → Right → Bottom. The focused panel is highlighted with a green border.
