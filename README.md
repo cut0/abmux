@@ -7,13 +7,18 @@ Monitor, create, switch between, and delete Claude Code sessions running on tmux
 ## Requirements
 
 - Node.js >= 24
-- pnpm >= 10
 - [tmux](https://github.com/tmux/tmux)
 
 ## Install
 
 ```sh
+npm install -g abmux
+# or
+yarn global add abmux
+# or
 pnpm add -g abmux
+# or
+bun add -g abmux
 ```
 
 ## Getting Started
