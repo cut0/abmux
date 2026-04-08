@@ -17,6 +17,7 @@ export const createTuiCommand =
   ({ usecases, services, infra }: TuiCommandDeps) =>
   async (): Promise<void> => {
     const directories = await services.directoryScan.scan();
+    const sessionCwdMap = new Map<string, string>();
 
     let instance: ReturnType<typeof render>;
     let pendingPrompt: string | undefined;
@@ -61,9 +62,12 @@ export const createTuiCommand =
         instance = renderApp();
         return prompt;
       },
-      attachSession: (sessionName: string): void => {
+      navigateToPane: async (up: UnifiedPane): Promise<void> => {
+        const target = `${up.pane.sessionName}:${String(up.pane.windowIndex)}`;
+        await infra.tmuxCli.selectWindow(target);
+        await infra.tmuxCli.selectPane(up.pane.paneId);
         instance.unmount();
-        void infra.tmuxCli.attachSession(sessionName);
+        await infra.tmuxCli.attachSession(up.pane.sessionName);
         instance = renderApp();
       },
     };
@@ -79,6 +83,7 @@ export const createTuiCommand =
           currentSession: basename(process.cwd()),
           currentCwd: process.cwd(),
           directories,
+          sessionCwdMap,
           restoredPrompt: prompt,
           restoredSession: session,
         }),
