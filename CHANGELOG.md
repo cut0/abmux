@@ -1,5 +1,11 @@
 # abmux
 
+## 0.0.6
+
+### Patch Changes
+
+- [#11](https://github.com/cut0/abmux/pull/11) [`1ed230c`](https://github.com/cut0/abmux/commit/1ed230ccfe847869a8e2d21d06f454bf8c5ff159) Thanks [@cut0](https://github.com/cut0)! - feat: セッション横断 Overview パネルとステータスバーサマリを追加
+
 ## 0.0.5
 
 ### Patch Changes
