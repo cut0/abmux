@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createManagerUsecase, type ManagerUsecase } from "./manager-usecase.ts";
 import type { TmuxService } from "../services/tmux-service.ts";
 import type { SessionDetectionService } from "../services/session-detection-service.ts";
-import type { Infra } from "../infra/index.ts";
 import type { TmuxCli } from "../infra/tmux-cli.ts";
 import type { UnifiedPane } from "../models/session.ts";
 import type { TmuxPane } from "../models/tmux.ts";
@@ -77,8 +76,13 @@ describe("createManagerUsecase", () => {
         tmux: mockTmux,
         sessionDetection: mockSessionDetection,
         directoryScan: { scan: vi.fn().mockResolvedValue([]) },
+        sessionSummary: { fetchSummary: vi.fn().mockResolvedValue([]) },
       },
-      infra: { tmuxCli: mockTmuxCli, editor: { open: () => undefined } },
+      infra: {
+        tmuxCli: mockTmuxCli,
+        editor: { open: () => undefined },
+        claudeCli: { querySessionSummary: vi.fn().mockResolvedValue({ sessions: [] }) },
+      },
     });
   });
 

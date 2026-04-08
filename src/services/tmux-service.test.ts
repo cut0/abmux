@@ -26,7 +26,11 @@ describe("createTmuxService", () => {
 
   beforeEach(() => {
     mockCli = createMockTmuxCli();
-    const infra: Infra = { tmuxCli: mockCli, editor: { open: () => undefined } };
+    const infra: Infra = {
+      tmuxCli: mockCli,
+      editor: { open: () => undefined },
+      claudeCli: { querySessionSummary: vi.fn().mockResolvedValue({ sessions: [] }) },
+    };
     service = createTmuxService({ infra });
   });
 

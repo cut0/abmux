@@ -1,3 +1,4 @@
+import type { SessionSummaryResult } from "../models/claude-session.ts";
 import type { SessionGroup, UnifiedPane } from "../models/session.ts";
 import type { UsecaseContext } from "./index.ts";
 import { escapeShellArg } from "../utils/ShellUtils.ts";
@@ -16,6 +17,7 @@ export type ManagerUsecase = {
   createSession: (input: CreateSessionInput) => Promise<void>;
   list: () => Promise<ManagerListOutput>;
   enrichStatus: (up: UnifiedPane) => Promise<UnifiedPane>;
+  fetchOverview: (groups: SessionGroup[]) => Promise<SessionSummaryResult>;
   navigateTo: (up: UnifiedPane) => Promise<void>;
   highlightWindow: (up: UnifiedPane) => Promise<void>;
   unhighlightWindow: (up: UnifiedPane) => Promise<void>;
@@ -51,6 +53,10 @@ export const createManagerUsecase = (context: UsecaseContext): ManagerUsecase =>
       const panes = await tmux.listPanes();
       const sessionGroups = sessionDetection.groupBySession({ panes });
       return { sessionGroups };
+    },
+
+    fetchOverview: async (groups: SessionGroup[]): Promise<SessionSummaryResult> => {
+      return await context.services.sessionSummary.fetchSummary(groups);
     },
 
     enrichStatus: async (up: UnifiedPane): Promise<UnifiedPane> => {

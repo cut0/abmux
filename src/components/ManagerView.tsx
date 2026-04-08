@@ -1,20 +1,25 @@
 import { basename } from "node:path";
-import { Box, Text } from "ink";
-import { useCallback, useEffect, useMemo, useState, type FC } from "react";
-import type { ManagedSession, UnifiedPane } from "../models/session.ts";
+import { Box } from "ink";
+import { useCallback, useMemo, useRef, useState, type FC } from "react";
+
+import type { SessionSummaryResult } from "../models/claude-session.ts";
+import type { ManagedSession, SessionStatus, UnifiedPane } from "../models/session.ts";
 import { Header } from "./shared/Header.tsx";
 import { StatusBar } from "./shared/StatusBar.tsx";
 import { SessionListPanel } from "./shared/DirectorySelect.tsx";
 import { PaneListPanel } from "./PaneListPanel.tsx";
+import { SessionOverviewPanel } from "./SessionOverviewPanel.tsx";
 import { ConfirmView } from "./ConfirmView.tsx";
 import { DeleteSessionView } from "./DeleteSessionView.tsx";
 import { DirectorySearchView } from "./DirectorySearchView.tsx";
+import { useInterval } from "../hooks/use-interval.ts";
 import { useTerminalSize } from "../hooks/use-terminal-size.ts";
 import { APP_TITLE, APP_VERSION } from "../constants.ts";
 import { swallow } from "../utils/PromiseUtils.ts";
 
 export type ManagerActions = {
   fetchSessions: () => Promise<ManagedSession[]>;
+  fetchOverview: (sessions: ManagedSession[]) => Promise<SessionSummaryResult>;
   createSession: (sessionName: string, cwd: string, prompt: string) => Promise<void>;
   killSession: (sessionName: string) => Promise<void>;
   killPane: (paneId: string) => Promise<void>;
@@ -36,6 +41,7 @@ type Mode = (typeof MODE)[keyof typeof MODE];
 const FOCUS = {
   left: "left",
   right: "right",
+  bottom: "bottom",
 } as const;
 
 type Focus = (typeof FOCUS)[keyof typeof FOCUS];
@@ -55,6 +61,7 @@ type Props = {
 };
 
 const POLL_INTERVAL = 3000;
+const OVERVIEW_POLL_INTERVAL = 60_000;
 
 export const ManagerView: FC<Props> = ({
   actions,
@@ -74,6 +81,12 @@ export const ManagerView: FC<Props> = ({
   const [selectedSession, setSelectedSession] = useState<string | undefined>(restoredSession);
   const [pendingPrompt, setPendingPrompt] = useState(restoredPrompt ?? "");
   const [pendingDeleteSession, setPendingDeleteSession] = useState<string | undefined>(undefined);
+  const [overviewResult, setOverviewResult] = useState<SessionSummaryResult>({
+    overallSummary: "",
+    sessions: [],
+  });
+  const [overviewLoading, setOverviewLoading] = useState(true);
+  const overviewInFlightRef = useRef(false);
 
   const refresh = useCallback(async (): Promise<void> => {
     try {
@@ -90,15 +103,25 @@ export const ManagerView: FC<Props> = ({
     }
   }, [actions]);
 
-  useEffect(() => {
-    void refresh();
-    const timer = setInterval(() => {
-      void refresh();
-    }, POLL_INTERVAL);
-    return (): void => {
-      clearInterval(timer);
-    };
-  }, [refresh]);
+  useInterval(() => void refresh(), POLL_INTERVAL);
+
+  useInterval(() => {
+    if (overviewInFlightRef.current) return;
+    overviewInFlightRef.current = true;
+    setOverviewLoading(true);
+    void actions
+      .fetchOverview(sessionsState.sessions)
+      .then((result) => {
+        setOverviewResult(result);
+      })
+      .catch(() => {
+        // keep previous items
+      })
+      .finally(() => {
+        setOverviewLoading(false);
+        overviewInFlightRef.current = false;
+      });
+  }, OVERVIEW_POLL_INTERVAL, !sessionsState.isLoading);
 
   const resolvedSession = selectedSession ?? sessionsState.sessions[0]?.name;
 
@@ -114,6 +137,25 @@ export const ManagerView: FC<Props> = ({
       tabs: selectedManagedSession.groups.flatMap((g) => g.tabs),
     };
   }, [selectedManagedSession]);
+
+  const allGroups = useMemo(
+    () => sessionsState.sessions.flatMap((s) => s.groups),
+    [sessionsState.sessions],
+  );
+
+  const statusCounts = useMemo((): Partial<Record<SessionStatus, number>> => {
+    const counts: Partial<Record<SessionStatus, number>> = {};
+    for (const group of allGroups) {
+      for (const tab of group.tabs) {
+        for (const pane of tab.panes) {
+          if (pane.kind === "claude" && pane.claudeStatus) {
+            counts[pane.claudeStatus] = (counts[pane.claudeStatus] ?? 0) + 1;
+          }
+        }
+      }
+    }
+    return counts;
+  }, [allGroups]);
 
   const handleOpenAddSession = useCallback((): void => {
     setMode(MODE.addSession);
@@ -279,14 +321,17 @@ export const ManagerView: FC<Props> = ({
     );
   }
 
-  const panelHeight = rows - 5;
+  const fixedRows = 3; // Header(1 + marginBottom 1) + StatusBar(1)
+  const contentHeight = rows - fixedRows;
+  const topHeight = Math.floor(contentHeight / 2);
+  const bottomHeight = contentHeight - topHeight;
   const leftWidth = Math.floor(columns / 3);
   const rightWidth = columns - leftWidth;
 
   return (
     <Box flexDirection="column" height={rows}>
       <Header title={`${APP_TITLE} - v${APP_VERSION}`} />
-      <Box flexDirection="row" flexGrow={1}>
+      <Box flexDirection="row" height={topHeight}>
         <Box
           flexDirection="column"
           width={leftWidth}
@@ -297,7 +342,7 @@ export const ManagerView: FC<Props> = ({
             sessions={sessionsState.sessions}
             currentSession={currentSession}
             isFocused={focus === FOCUS.left}
-            availableRows={panelHeight}
+            availableRows={topHeight - 2}
             onSelect={handleSessionSelect}
             onCursorChange={handleSessionCursorChange}
             onDeleteSession={handleDeleteSession}
@@ -314,7 +359,7 @@ export const ManagerView: FC<Props> = ({
             selectedSession={resolvedSession}
             group={selectedGroup}
             isFocused={focus === FOCUS.right}
-            availableRows={panelHeight}
+            availableRows={topHeight - 2}
             onNavigate={handleNavigate}
             onHighlight={handleHighlight}
             onUnhighlight={handleUnhighlight}
@@ -324,11 +369,25 @@ export const ManagerView: FC<Props> = ({
           />
         </Box>
       </Box>
-      <Text dimColor>
-        {focus === FOCUS.left
-          ? "\u2191/\u2193 move  Enter/\u2192 select  n add  d delete  q quit"
-          : "\u2191/\u2193 move  Enter focus  n new  d kill  Esc/\u2190 back  q quit"}
-      </Text>
+      <SessionOverviewPanel
+        overallSummary={overviewResult.overallSummary}
+        items={overviewResult.sessions}
+        groups={allGroups}
+        isLoading={overviewLoading}
+        isFocused={focus === FOCUS.bottom}
+        availableRows={bottomHeight}
+        onBack={handleBack}
+      />
+      <StatusBar
+        message={
+          focus === FOCUS.left
+            ? "\u2191/\u2193 move  Enter/\u2192 select  n add  d delete  q quit"
+            : focus === FOCUS.right
+              ? "\u2191/\u2193 move  Enter focus  n new  d kill  Esc/\u2190 back  q quit"
+              : "\u2191/\u2193 scroll  Esc/\u2190 back  q quit"
+        }
+        statusCounts={statusCounts}
+      />
     </Box>
   );
 };

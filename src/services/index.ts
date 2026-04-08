@@ -5,6 +5,10 @@ import {
 } from "./session-detection-service.ts";
 import { createTmuxService, type TmuxService } from "./tmux-service.ts";
 import { createDirectoryScanService, type DirectoryScanService } from "./directory-scan-service.ts";
+import {
+  createSessionSummaryService,
+  type SessionSummaryService,
+} from "./session-summary-service.ts";
 
 export type ServiceContext = {
   infra: Infra;
@@ -14,10 +18,12 @@ export type Services = {
   tmux: TmuxService;
   sessionDetection: SessionDetectionService;
   directoryScan: DirectoryScanService;
+  sessionSummary: SessionSummaryService;
 };
 
 export const createServices = (context: ServiceContext): Services => ({
   tmux: createTmuxService(context),
   sessionDetection: createSessionDetectionService(),
   directoryScan: createDirectoryScanService(),
+  sessionSummary: createSessionSummaryService(context),
 });

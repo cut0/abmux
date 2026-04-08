@@ -2,10 +2,11 @@ import { basename } from "node:path";
 import { render } from "ink";
 import { createElement } from "react";
 import { ManagerView, type ManagerActions } from "../components/ManagerView.tsx";
+import type { SessionSummaryResult } from "../models/claude-session.ts";
 import type { Infra } from "../infra/index.ts";
 import type { Services } from "../services/index.ts";
 import type { Usecases } from "../usecases/index.ts";
-import type { ManagedSession, UnifiedPane } from "../models/session.ts";
+import type { ManagedSession, SessionGroup, UnifiedPane } from "../models/session.ts";
 import { findMatchingDirectory } from "../utils/PathUtils.ts";
 
 type TuiCommandDeps = {
@@ -52,6 +53,10 @@ export const createTuiCommand =
           path: items[0].path,
           groups: items.map((item) => item.group),
         }));
+      },
+      fetchOverview: async (sessions: ManagedSession[]): Promise<SessionSummaryResult> => {
+        const groups: SessionGroup[] = sessions.flatMap((s) => s.groups);
+        return await usecases.manager.fetchOverview(groups);
       },
       createSession: async (sessionName: string, cwd: string, prompt: string): Promise<void> => {
         await usecases.manager.createSession({ sessionName, cwd, prompt });
