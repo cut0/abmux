@@ -1,5 +1,11 @@
 # abmux
 
+## 0.0.5
+
+### Patch Changes
+
+- [#9](https://github.com/cut0/abmux/pull/9) [`be05732`](https://github.com/cut0/abmux/commit/be05732bfc1929e4243e6c56f5dc02b91f18bcab) Thanks [@cut0](https://github.com/cut0)! - refactor: セッション状態を ManagedSession に一元化
+
 ## 0.0.4
 
 ### Patch Changes
