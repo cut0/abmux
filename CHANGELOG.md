@@ -1,5 +1,15 @@
 # abmux
 
+## 0.0.8
+
+### Patch Changes
+
+- [#15](https://github.com/cut0/abmux/pull/15) [`d3bba4c`](https://github.com/cut0/abmux/commit/d3bba4c4d2cc0e4cb863784156a0938cb5c78b15) Thanks [@cut0](https://github.com/cut0)! - feat: セッション作成時の worktree トグル機能を追加
+
+- [#18](https://github.com/cut0/abmux/pull/18) [`72064f0`](https://github.com/cut0/abmux/commit/72064f03e32dddb31cbee127ca827a14a27597ed) Thanks [@cut0](https://github.com/cut0)! - feat: unmount/remount サイクルでの UI 状態保持
+
+- [#17](https://github.com/cut0/abmux/pull/17) [`0a6b5aa`](https://github.com/cut0/abmux/commit/0a6b5aa2ffd9b26a13da89dd211c89f8f7130f05) Thanks [@cut0](https://github.com/cut0)! - fix: Overview パネルのフォーカス遷移と復帰時ローディングを修正
+
 ## 0.0.7
 
 ### Patch Changes
