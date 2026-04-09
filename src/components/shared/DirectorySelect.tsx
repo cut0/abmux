@@ -77,17 +77,17 @@ export const SessionListPanel: FC<Props> = ({
         return;
       }
 
-      if (key.upArrow) {
+      if (key.upArrow || input === "k") {
         moveCursor(clampedCursor - 1);
         return;
       }
 
-      if (key.downArrow) {
+      if (key.downArrow || input === "j") {
         moveCursor(clampedCursor + 1);
         return;
       }
 
-      if (key.return || key.rightArrow) {
+      if (key.return || key.rightArrow || input === "l") {
         const name = names[clampedCursor];
         if (name) onSelect(name);
         return;

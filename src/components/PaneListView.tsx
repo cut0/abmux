@@ -95,18 +95,18 @@ export const PaneListView: FC<Props> = ({
         return;
       }
 
-      if (key.escape || key.leftArrow) {
+      if (key.escape || key.leftArrow || input === "h") {
         clearHighlight();
         onBack();
         return;
       }
 
-      if (key.upArrow) {
+      if (key.upArrow || input === "k") {
         moveCursor(clampedCursor - 1);
         return;
       }
 
-      if (key.downArrow) {
+      if (key.downArrow || input === "j") {
         moveCursor(clampedCursor + 1);
         return;
       }
