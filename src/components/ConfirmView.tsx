@@ -13,7 +13,7 @@ type Props = {
 
 export const ConfirmView: FC<Props> = ({ selectedDir, prompt, onConfirm, onCancel }) => {
   const { rows } = useTerminalSize();
-  const [worktree, setWorktree] = useState(true);
+  const [worktree, setWorktree] = useState(false);
   const previewLines = prompt.split("\n");
   const maxPreview = Math.min(previewLines.length, rows - 7);
 
