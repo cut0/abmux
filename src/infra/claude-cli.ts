@@ -60,6 +60,7 @@ export const createClaudeCli = (): ClaudeCli => ({
     try {
       const raw = await execClaude([
         "-p",
+        "--bare",
         "--output-format",
         "json",
         "--json-schema",
