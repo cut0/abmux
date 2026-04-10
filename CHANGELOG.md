@@ -1,5 +1,13 @@
 # abmux
 
+## 0.0.11
+
+### Patch Changes
+
+- [#26](https://github.com/cut0/abmux/pull/26) [`7eb9561`](https://github.com/cut0/abmux/commit/7eb9561f1897a8d771550dfcd9a68ae54af28f17) Thanks [@cut0](https://github.com/cut0)! - update: worktree のデフォルトを OFF に変更
+
+- [#29](https://github.com/cut0/abmux/pull/29) [`3b6a157`](https://github.com/cut0/abmux/commit/3b6a1570da2a0f03076b503efae23ad78ea20ca5) Thanks [@cut0](https://github.com/cut0)! - feat: vim スタイルの hjkl キーバインドを追加
+
 ## 0.0.10
 
 ### Patch Changes
