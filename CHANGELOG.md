@@ -1,5 +1,11 @@
 # abmux
 
+## 0.0.12
+
+### Patch Changes
+
+- [#28](https://github.com/cut0/abmux/pull/28) [`ff81875`](https://github.com/cut0/abmux/commit/ff81875e43da1a0ccb776a7e8fb8d502b9200241) Thanks [@cut0](https://github.com/cut0)! - fix: overview 生成時の Claude CLI 呼び出しで hook を無効化
+
 ## 0.0.11
 
 ### Patch Changes
